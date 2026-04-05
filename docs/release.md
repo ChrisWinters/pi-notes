@@ -44,6 +44,31 @@ Before release:
 
 ## Publish
 
+### GitHub Actions (recommended, with provenance)
+
+This repo includes `.github/workflows/publish.yml`, which publishes with:
+
+```bash
+npm publish --provenance
+```
+
+Trigger options:
+
+- publish a GitHub Release (`release.published`)
+- run workflow manually (`workflow_dispatch`)
+
+One-time npm setup required:
+
+1. In npm package settings for `@tribalnerd/pi-notes`, add a **Trusted Publisher**.
+2. Provider: GitHub Actions
+3. Repository: `ChrisWinters/pi-notes`
+4. Workflow: `publish.yml`
+5. Environment (if used): leave unset unless you later add one in workflow.
+
+After trusted publishing is configured, the workflow publishes without an `NPM_TOKEN` secret and attaches provenance automatically.
+
+### Local fallback
+
 ```bash
 npm publish --access public
 ```
