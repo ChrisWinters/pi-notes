@@ -38,3 +38,24 @@ export function renderGrepResults(query: string, notes: readonly StoredNote[]): 
 
   return lines.join("\n");
 }
+
+function previewFirstLines(markdown: string, maxLines: number): string {
+  const lines = markdown.split("\n");
+  if (lines.length <= maxLines) {
+    return markdown;
+  }
+
+  return `${lines.slice(0, maxLines).join("\n")}\n...`;
+}
+
+export function renderRewritePreview(currentMarkdown: string, proposedMarkdown: string): string {
+  return [
+    "Rewrite preview (first 12 lines)",
+    "",
+    "Current:",
+    previewFirstLines(currentMarkdown, 12),
+    "",
+    "Proposed:",
+    previewFirstLines(proposedMarkdown, 12)
+  ].join("\n");
+}

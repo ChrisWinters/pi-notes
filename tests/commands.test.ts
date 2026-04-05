@@ -11,6 +11,7 @@ import { handleNotesCommand } from "../src/commands/notes.js";
 interface TestUi {
   readonly notify: ReturnType<typeof vi.fn>;
   readonly confirm: ReturnType<typeof vi.fn>;
+  readonly editor: ReturnType<typeof vi.fn>;
 }
 
 interface TestContext {
@@ -27,13 +28,19 @@ async function createTempCwd(): Promise<string> {
   return join(root, "project");
 }
 
-function createContext(cwd: string, hasUI: boolean, confirmResult: boolean): TestContext {
+function createContext(
+  cwd: string,
+  hasUI: boolean,
+  confirmResult: boolean,
+  editorResult?: string
+): TestContext {
   return {
     cwd,
     hasUI,
     ui: {
       notify: vi.fn(),
-      confirm: vi.fn(() => Promise.resolve(confirmResult))
+      confirm: vi.fn(() => Promise.resolve(confirmResult)),
+      editor: vi.fn((_title: string, prefilled: string) => Promise.resolve(editorResult ?? prefilled))
     }
   };
 }
@@ -148,5 +155,58 @@ describe("handleNotesCommand", () => {
 
     const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
     expect(messages.some((message) => message.includes("Missing query for /notes grep."))).toBe(true);
+  });
+
+  it("rewrites note after preview and confirmation", async () => {
+    const cwd = await createTempCwd();
+    const rewritten = [
+      "---",
+      "title: rewrite-me",
+      "updated: 2026-04-05T12:00:00.000Z",
+      "---",
+      "# rewrite-me",
+      "Updated content"
+    ].join("\n");
+
+    const ctx = createContext(cwd, true, true, rewritten);
+
+    await handleNotesCommand("new rewrite-me", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand(
+      "rewrite rewrite-me simplify wording",
+      ctx as unknown as ExtensionCommandContext
+    );
+    await handleNotesCommand("show rewrite-me", ctx as unknown as ExtensionCommandContext);
+
+    expect(ctx.ui.editor).toHaveBeenCalledTimes(1);
+    expect(ctx.ui.confirm).toHaveBeenCalled();
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Rewrite preview"))).toBe(true);
+    expect(messages.some((message) => message.includes("Rewrote [project] rewrite-me.md"))).toBe(true);
+    expect(messages.some((message) => message.includes("Updated content"))).toBe(true);
+  });
+
+  it("cancels rewrite when confirmation is denied", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, false, "# changed");
+
+    await handleNotesCommand("new no-rewrite", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand(
+      "rewrite no-rewrite do not apply",
+      ctx as unknown as ExtensionCommandContext
+    );
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Rewrite cancelled."))).toBe(true);
+  });
+
+  it("returns warning when rewrite note is missing", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("rewrite missing-note apply this", ctx as unknown as ExtensionCommandContext);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Note not found: missing-note"))).toBe(true);
   });
 });

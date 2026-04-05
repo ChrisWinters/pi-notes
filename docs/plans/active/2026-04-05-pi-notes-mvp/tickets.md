@@ -135,7 +135,7 @@ Reference: `docs/references/pi-extensions.md`
   - behavior matrix: `docs/plans/active/2026-04-05-pi-notes-mvp/evidence/t-005-grep-and-ux.md`
 
 ## T-006 — Implement `/notes rewrite` preview + confirm flow
-- Status: ready
+- Status: done
 - Story: 4
 - Goal: Safe AI-assisted mutation flow.
 - Scope:
@@ -149,9 +149,15 @@ Reference: `docs/references/pi-extensions.md`
   - preview renderer in `src/ui/render.ts`
   - tests for approval, rejection, and missing-note cases
 - Validation:
-  - tests for approve/decline/missing-note scenarios
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run test`
+  - ✅ `npm run build`
 - Evidence:
-  - test logs + sample rewrite transcript
+  - rewrite command flow in `src/commands/notes.ts`
+  - preview rendering helper in `src/ui/render.ts`
+  - rewrite coverage in `tests/commands.test.ts`
+  - behavior matrix: `docs/plans/active/2026-04-05-pi-notes-mvp/evidence/t-006-rewrite-flow.md`
 
 ## T-007 — Documentation completion and consistency pass
 - Status: ready
