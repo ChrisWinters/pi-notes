@@ -14,9 +14,4 @@ This directory contains durable project documentation and execution plans.
 
 ## Latest completed plan
 
-- `docs/plans/completed/2026-04-05-notes-workflow-expansion/`
-
-## Previous completed plans
-
-- `docs/plans/completed/2026-04-05-audit-remediation/`
-- `docs/plans/completed/2026-04-05-pi-notes-mvp/`
+- _None currently_
