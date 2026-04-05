@@ -28,14 +28,13 @@ jobs:
       - name: Quality gate
         run: npm run lint && npm run typecheck && npm run test && npm run build
 
-      - name: Verify npm trusted publishing auth (OIDC)
-        run: |
-          npm whoami
-          npm ping
-
       - name: Show package metadata being published
+        run: npm pkg get name version publishConfig.access
+
+      - name: OIDC preflight note
         run: |
-          npm pkg get name version publishConfig.access
+          echo "Trusted publishing auth is established during npm publish."
+          echo "Preflight commands like 'npm whoami' may return 401 before publish and are not used here."
 
       - name: Publish to npm with provenance
         run: npm publish --provenance
