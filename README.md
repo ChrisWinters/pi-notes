@@ -14,7 +14,7 @@ Notes are stored in markdown and can live at:
 ## Install
 
 ```bash
-pi install @tribalnerd/pi-notes
+pi install npm:@tribalnerd/pi-notes
 ```
 
 ## Commands
