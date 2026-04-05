@@ -1,19 +1,26 @@
 # pi-notes
 
-`pi-notes` is a Pi extension for human-focused notes with deterministic command flows, explicit scope handling, and safety-first mutation rules.
+A human-first notes extension for [Pi](https://github.com/badlogic/pi-mono), built to keep quick notes organized, searchable, and safe directly inside your Pi workflow.
 
-> Status: MVP shipped; audit-remediation completed (`docs/plans/completed/2026-04-05-audit-remediation/`).
+- Pi project: https://github.com/badlogic/pi-mono
+- pi-notes repo: https://github.com/ChrisWinters/pi-notes
 
-## Features
+## Summary
 
-- Deterministic note commands for create/read/update/delete/list/search
-- Dual scope storage:
-  - project: `.pi/notes/`
-  - global: `~/.pi/notes/`
-- Safe name normalization + path traversal protection
-- Confirm-gated destructive and rewrite flows
+`pi-notes` adds a `/notes` command family to Pi so you can create, read, update, search, and safely remove notes without leaving your terminal flow.
 
-## Command reference
+Notes are stored in markdown and can live at:
+
+- project scope: `.pi/notes/`
+- global scope: `~/.pi/notes/`
+
+## Install
+
+```bash
+pi install @ChrisWinters/pi-notes
+```
+
+## Commands
 
 - `/notes ls [--project|--global]`
 - `/notes show <name> [--project|--global]`
@@ -35,58 +42,38 @@ Flags:
 - `--project` -> project scope only
 - `--global` -> global scope only
 
-Parsing semantics (audit-remediation update):
+Parser semantics:
 
-- scope flags are parsed at argument edges (leading/trailing option positions)
-- mid-content flag-like tokens are preserved as literal content
+- scope flags are parsed only at argument edges (leading/trailing)
+- flag-like tokens inside content are preserved as literal text
 - use `--` to force all following tokens to be treated literally
 
-### Rewrite behavior (current MVP)
+## Purpose
 
-`/notes rewrite` opens an editor prefilled with the current note, shows a preview, then asks for explicit confirmation before writing.
+- Keep lightweight human notes close to actual coding work
+- Avoid context switching into separate apps/tools
+- Maintain predictable command behavior and safe write/delete flows
 
-The `<instruction>` argument is currently treated as user intent metadata and included in success messaging.
+## Features
 
-## Installation
+- Deterministic note commands for CRUD + search
+- Dual-scope storage (project + global)
+- Safe name normalization and path protections
+- Atomic note creation and serialized note mutations
+- Confirm-gated destructive and rewrite operations
+- Markdown + frontmatter note format
 
-### Local development install (project path)
+## Docs
 
-Use a local extension path while developing. Keep extension entry under project source and load through your Pi extension workflow.
+- Commands: `docs/commands.md`
+- Storage model: `docs/storage.md`
+- Security model: `docs/security.md`
+- Architecture: `docs/architecture.md`
+- Release guide: `docs/release.md`
+- Plan history:
+  - `docs/plans/completed/2026-04-05-pi-notes-mvp/`
+  - `docs/plans/completed/2026-04-05-audit-remediation/`
 
-### npm package install (target after publish)
+## License
 
-Add package reference in Pi settings/packages once published:
-
-- `npm:pi-notes@<version>`
-
-### Git package install (alternative)
-
-Add git reference in Pi settings/packages:
-
-- `git:github.com/<your-username>/pi-notes@<tag-or-branch>`
-
-## Pi compatibility notes
-
-Reference snapshot used by this repo:
-
-- `docs/references/pi-extensions.md`
-
-Important behavior:
-
-- command names can be suffixed by Pi when collisions exist (for example `/notes:1`)
-- non-interactive contexts can restrict confirm-gated flows; `pi-notes` checks `ctx.hasUI`
-
-## Development
-
-```bash
-npm install
-npm run lint
-npm run typecheck
-npm run test
-npm run build
-```
-
-## Planning and specs
-
-- Latest completed plan: `docs/plans/completed/2026-04-05-audit-remediation/`
-- Previous completed plan: `docs/plans/completed/2026-04-05-pi-notes-mvp/`
+MIT — see [`LICENSE`](./LICENSE).

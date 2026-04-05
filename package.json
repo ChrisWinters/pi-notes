@@ -6,12 +6,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-username/pi-notes.git"
+    "url": "git+https://github.com/ChrisWinters/pi-notes.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/pi-notes/issues"
+    "url": "https://github.com/ChrisWinters/pi-notes/issues"
   },
-  "homepage": "https://github.com/your-username/pi-notes#readme",
+  "homepage": "https://github.com/ChrisWinters/pi-notes#readme",
   "files": [
     "src",
     "README.md",
