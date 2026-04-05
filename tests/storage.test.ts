@@ -1,6 +1,11 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+
 import { describe, expect, it } from "vitest";
 
-import { resolveScopePreference } from "../src/core/storage.js";
+import { parseNoteMarkdown } from "../src/core/format.js";
+import { NotesStorage, resolveScopePreference } from "../src/core/storage.js";
 
 describe("resolveScopePreference", () => {
   it("returns default with no force flags", () => {
@@ -9,5 +14,89 @@ describe("resolveScopePreference", () => {
 
   it("throws on conflicting scope flags", () => {
     expect(() => resolveScopePreference({ forceProject: true, forceGlobal: true })).toThrowError();
+  });
+});
+
+describe("NotesStorage", () => {
+  async function withStorage(run: (storage: NotesStorage) => Promise<void>): Promise<void> {
+    const root = await mkdtemp(join(tmpdir(), "pi-notes-test-"));
+    const cwd = join(root, "project");
+    const globalNotesDir = join(root, "global", ".pi", "notes");
+    const storage = new NotesStorage({ cwd, globalNotesDir });
+
+    try {
+      await run(storage);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  it("creates and reads a project note by default", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "Project Ideas", scope: "project" });
+
+      const loaded = await storage.readNote("Project Ideas", { forceProject: false, forceGlobal: false });
+      expect(loaded).not.toBeNull();
+      expect(loaded?.scope).toBe("project");
+      expect(loaded?.fileName).toBe("project-ideas.md");
+    });
+  });
+
+  it("falls back to global when project note does not exist", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "Context", scope: "global" });
+
+      const loaded = await storage.readNote("Context", { forceProject: false, forceGlobal: false });
+      expect(loaded?.scope).toBe("global");
+    });
+  });
+
+  it("prefers project note when both scopes contain same note", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "Runbook", scope: "global", title: "Global Runbook" });
+      const projectCreated = await storage.createNote({ name: "Runbook", scope: "project", title: "Project Runbook" });
+
+      const loaded = await storage.readNote("Runbook", { forceProject: false, forceGlobal: false });
+      expect(loaded?.scope).toBe("project");
+
+      const parsed = parseNoteMarkdown(projectCreated.markdown);
+      expect(parsed.frontmatter.title).toBe("Project Runbook");
+    });
+  });
+
+  it("updates frontmatter timestamp on append mutation", async () => {
+    await withStorage(async (storage) => {
+      const created = await storage.createNote({ name: "Daily", scope: "project" });
+      const before = parseNoteMarkdown(created.markdown).frontmatter.updated;
+
+      const appended = await storage.appendToNote({
+        name: "Daily",
+        text: "- shipped T-003",
+        selection: { forceProject: false, forceGlobal: false },
+        updatedIso: "2026-04-05T20:00:00.000Z"
+      });
+
+      const parsed = parseNoteMarkdown(appended.markdown);
+      expect(parsed.frontmatter.updated).toBe("2026-04-05T20:00:00.000Z");
+      expect(parsed.frontmatter.updated).not.toBe(before);
+      expect(parsed.body).toContain("- shipped T-003");
+    });
+  });
+
+  it("lists merged notes with project precedence in default scope", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "Shared", scope: "global" });
+      await storage.createNote({ name: "Shared", scope: "project" });
+      await storage.createNote({ name: "Only Global", scope: "global" });
+      await storage.createNote({ name: "Only Project", scope: "project" });
+
+      const notes = await storage.listNotes({ forceProject: false, forceGlobal: false });
+      const names = notes.map((note) => `${note.scope}:${note.fileName}`);
+
+      expect(names).toContain("project:shared.md");
+      expect(names).toContain("global:only-global.md");
+      expect(names).toContain("project:only-project.md");
+      expect(names.filter((name) => name.endsWith(":shared.md"))).toHaveLength(1);
+    });
   });
 });

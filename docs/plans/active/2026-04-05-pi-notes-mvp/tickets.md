@@ -61,7 +61,7 @@ Reference: `docs/references/pi-extensions.md`
   - edge-case matrix: `docs/plans/active/2026-04-05-pi-notes-mvp/evidence/t-002-edge-case-matrix.md`
 
 ## T-003 — Implement storage layer with scope resolution
-- Status: ready
+- Status: done
 - Story: 2
 - Goal: Reliable project/global note storage operations.
 - Scope:
@@ -74,9 +74,15 @@ Reference: `docs/references/pi-extensions.md`
   - `src/core/format.ts` for markdown/frontmatter read-write
   - `tests/storage.test.ts` and `tests/format.test.ts`
 - Validation:
-  - unit tests across both scopes and fallback behavior
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run test`
+  - ✅ `npm run build`
 - Evidence:
-  - storage tests + sample note fixtures
+  - storage implementation in `src/core/storage.ts` (scope resolution + CRUD/list helpers)
+  - markdown/frontmatter helpers in `src/core/format.ts` (parse/render/update timestamp)
+  - expanded tests in `tests/storage.test.ts` and `tests/format.test.ts`
+  - behavior matrix: `docs/plans/active/2026-04-05-pi-notes-mvp/evidence/t-003-storage-scope-matrix.md`
 
 ## T-004 — Implement deterministic `/notes` commands (part 1)
 - Status: ready
