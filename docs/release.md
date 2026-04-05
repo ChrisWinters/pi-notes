@@ -1,18 +1,48 @@
-# Release Guide (Draft)
+# Release Guide
 
-## Pre-release gate
+## Quality gate (required)
+
+Run and pass:
 
 - `npm run lint`
 - `npm run typecheck`
 - `npm run test`
 - `npm run build`
-- manual smoke test in Pi
 
-## Publish steps
+## Manual smoke test (required)
 
-1. Update `CHANGELOG.md`
-2. Bump package version
-3. Tag release (`vX.Y.Z`)
-4. `npm publish --access public`
+In Pi, validate:
 
-Detailed release checklist will be completed in T-008.
+- `/notes new smoke-note`
+- `/notes append smoke-note "hello"`
+- `/notes show smoke-note`
+- `/notes grep hello`
+- `/notes rm smoke-note` (confirm flow)
+- `/notes rewrite smoke-note <instruction>` (preview + confirm/cancel behavior)
+
+## Documentation gate (required)
+
+Before release:
+
+- README command reference matches implementation
+- `docs/commands.md` and `docs/storage.md` match behavior
+- security docs cover confirm-gated flows and non-interactive behavior
+- plan tickets and evidence are current
+
+## Versioning
+
+- bump `package.json` semver
+- update `CHANGELOG.md`
+- tag `vX.Y.Z`
+
+## Publish
+
+```bash
+npm publish --access public
+```
+
+## Post-publish checks
+
+- verify npm package metadata
+- validate install path in a clean Pi environment
+- test command invocation with possible suffixed command names (`/notes:1`)

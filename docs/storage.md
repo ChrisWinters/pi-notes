@@ -1,19 +1,58 @@
-# Storage (Draft)
+# Storage
 
-Default note locations:
+## Directories
 
-- Project: `.pi/notes/`
-- Global: `~/.pi/notes/`
+- Project scope: `<cwd>/.pi/notes/`
+- Global scope: `~/.pi/notes/`
 
-Resolution behavior:
+## Scope resolution
 
-1. Default: project first, then global fallback
-2. `--project`: project only
-3. `--global`: global only
+`NotesStorage` applies these rules:
 
-Format:
+1. If `--project`: project only
+2. If `--global`: global only
+3. If no scope flag: project first, then global fallback
 
-- Markdown files with lightweight frontmatter
-- Safe slug-based filename normalization
+For list/search in default mode:
 
-Detailed invariants will be finalized in T-002 and T-003.
+- project and global notes are merged
+- identical filenames resolve to project entries (project precedence)
+
+## File naming
+
+Names are normalized to safe slug filenames ending in `.md`.
+
+Examples:
+
+- `Project Ideas` -> `project-ideas.md`
+- `Café notes!!!` -> `cafe-notes.md`
+
+Unsafe names are rejected (traversal, path separators, absolute/home paths, control chars).
+
+## Note format
+
+Markdown with frontmatter:
+
+```md
+---
+title: roadmap
+updated: 2026-04-05T12:00:00.000Z
+tags: [planning, pi]
+---
+# roadmap
+
+...content...
+```
+
+Required frontmatter keys:
+
+- `title`
+- `updated`
+
+Optional keys:
+
+- `tags`
+
+## Mutation behavior
+
+All write paths (`writeNote`, `appendToNote`, rewrite apply) refresh `updated` timestamp before persistence.

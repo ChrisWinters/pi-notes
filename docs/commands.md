@@ -1,18 +1,47 @@
-# Commands (Draft)
+# Commands
 
-Planned command family:
+`pi-notes` exposes the `/notes` command family via `pi.registerCommand("notes", ...)`.
 
-- `/notes ls`
-- `/notes show <name>`
-- `/notes new <name>`
-- `/notes append <name> <text>`
-- `/notes rm <name>`
-- `/notes grep <query>`
-- `/notes rewrite <name> <instruction>`
+## Syntax
 
-Scope flags:
+- `/notes ls [--project|--global]`
+- `/notes show <name> [--project|--global]`
+- `/notes new <name> [--project|--global]`
+- `/notes append <name> <text> [--project|--global]`
+- `/notes rm <name> [--project|--global]`
+- `/notes grep <query> [--project|--global]`
+- `/notes rewrite <name> <instruction> [--project|--global]`
 
-- `--project`
-- `--global`
+## Examples
 
-Behavior details will be finalized in T-004 to T-006.
+- `/notes new roadmap`
+- `/notes append roadmap "add launch checklist"`
+- `/notes show roadmap`
+- `/notes grep checklist`
+- `/notes rm roadmap`
+
+## Scope flags
+
+- `--project` -> only `.pi/notes/`
+- `--global` -> only `~/.pi/notes/`
+- no flag -> read default: project first, then global fallback
+
+## UX behavior
+
+- `ls` returns scope-tagged entries (`[project]` / `[global]`)
+- `show` returns scope + path + note markdown
+- `grep` returns either matches or explicit no-match feedback
+- `rm` requires confirmation and is blocked when no UI is available
+- `rewrite` requires editor + preview + confirmation before apply
+
+## Non-interactive behavior
+
+If `ctx.hasUI` is false:
+
+- `rm` is blocked with an explicit error
+- `rewrite` is blocked with an explicit error
+
+## Command collision note
+
+Pi may suffix duplicate command names when multiple extensions register the same command, for example `/notes:1`.
+See: `docs/references/pi-extensions.md`.

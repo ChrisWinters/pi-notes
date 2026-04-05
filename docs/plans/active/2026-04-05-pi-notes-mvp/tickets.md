@@ -160,7 +160,7 @@ Reference: `docs/references/pi-extensions.md`
   - behavior matrix: `docs/plans/active/2026-04-05-pi-notes-mvp/evidence/t-006-rewrite-flow.md`
 
 ## T-007 — Documentation completion and consistency pass
-- Status: ready
+- Status: done
 - Story: 5
 - Goal: Public-facing docs match implementation.
 - Scope:
@@ -172,9 +172,10 @@ Reference: `docs/references/pi-extensions.md`
   - include command-collision note (`/notes`, `/notes:1`) in docs
   - include non-interactive behavior notes for confirm-gated actions
 - Validation:
-  - docs reviewed against command behavior and tests
+  - ✅ docs reviewed against command behavior and tests
+  - ✅ command references aligned with implemented command handlers
 - Evidence:
-  - docs checklist
+  - docs consistency checklist: `docs/plans/active/2026-04-05-pi-notes-mvp/evidence/t-007-docs-consistency-checklist.md`
 
 ## T-008 — Release prep and v0.1.0 readiness
 - Status: ready
