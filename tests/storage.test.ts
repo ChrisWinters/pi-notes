@@ -151,4 +151,30 @@ describe("NotesStorage", () => {
       expect(markdown).toContain("entry-b");
     });
   });
+
+  it("keeps all entries under higher concurrent append volume", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "race-many", scope: "project" });
+
+      const entries = Array.from({ length: 10 }, (_value, index) => `entry-${index}`);
+      await Promise.all(
+        entries.map((entry, index) => {
+          return storage.appendToNote({
+            name: "race-many",
+            text: entry,
+            selection: { forceProject: false, forceGlobal: false },
+            updatedIso: `2026-04-05T20:00:${String(index).padStart(2, "0")}.000Z`
+          });
+        })
+      );
+
+      const note = await storage.readNote("race-many", { forceProject: false, forceGlobal: false });
+      expect(note).not.toBeNull();
+
+      const markdown = note?.markdown ?? "";
+      for (const entry of entries) {
+        expect(markdown).toContain(entry);
+      }
+    });
+  });
 });

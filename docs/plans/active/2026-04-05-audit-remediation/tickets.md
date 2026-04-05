@@ -66,7 +66,7 @@ Status legend: `ready` | `in_progress` | `blocked` | `done`
   - evidence log: `docs/plans/active/2026-04-05-audit-remediation/evidence/t-903-mutation-serialization.md`
 
 ## T-904 — Expand regression and reliability tests
-- Status: ready
+- Status: done
 - Story: 3
 - Goal: Ensure bug/race scenarios remain fixed.
 - Scope:
@@ -78,9 +78,15 @@ Status legend: `ready` | `in_progress` | `blocked` | `done`
   - `tests/commands.test.ts`
   - `tests/storage.test.ts`
 - Validation:
-  - full test suite green, targeted tests exercising prior failures
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run test`
+  - ✅ `npm run build`
+  - ✅ full suite green with targeted regressions exercised
 - Evidence:
-  - test logs + before/after notes
+  - command/parser regression additions in `tests/commands.test.ts`
+  - race reliability additions in `tests/storage.test.ts`
+  - evidence log: `docs/plans/active/2026-04-05-audit-remediation/evidence/t-904-regression-reliability-tests.md`
 
 ## T-905 — Refactor command router for maintainability
 - Status: ready

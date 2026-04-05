@@ -173,6 +173,45 @@ describe("handleNotesCommand", () => {
     expect(messages.some((message) => message.includes("Missing query for /notes grep."))).toBe(true);
   });
 
+  it("supports literal grep query tokens via -- separator", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("new parser-query", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand(
+      "append parser-query literal --global token",
+      ctx as unknown as ExtensionCommandContext
+    );
+    await handleNotesCommand("grep -- --global", ctx as unknown as ExtensionCommandContext);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Search results for: --global"))).toBe(true);
+    expect(messages.some((message) => message.includes("[project] parser-query.md"))).toBe(true);
+  });
+
+  it("preserves literal flag-like tokens in rewrite instruction", async () => {
+    const cwd = await createTempCwd();
+    const rewritten = [
+      "---",
+      "title: rewrite-flags",
+      "updated: 2026-04-05T12:00:00.000Z",
+      "---",
+      "# rewrite-flags",
+      "Updated body"
+    ].join("\n");
+
+    const ctx = createContext(cwd, true, true, rewritten);
+
+    await handleNotesCommand("new rewrite-flags", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand(
+      "rewrite rewrite-flags keep --global token",
+      ctx as unknown as ExtensionCommandContext
+    );
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("instruction: keep --global token"))).toBe(true);
+  });
+
   it("rewrites note after preview and confirmation", async () => {
     const cwd = await createTempCwd();
     const rewritten = [
