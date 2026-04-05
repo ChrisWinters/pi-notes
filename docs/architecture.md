@@ -30,9 +30,9 @@
 
 ## Pi alignment
 
-This repository tracks Pi extension contract behavior against:
+This repository tracks Pi extension contract behavior against upstream Pi docs:
 
-- `docs/references/pi-extensions.md`
+- https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/extensions.md
 
 Key contracts followed:
 

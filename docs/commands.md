@@ -75,4 +75,4 @@ If `ctx.hasUI` is false:
 ## Command collision note
 
 Pi may suffix duplicate command names when multiple extensions register the same command, for example `/notes:1`.
-See: `docs/references/pi-extensions.md`.
+See upstream Pi extensions docs: https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/extensions.md

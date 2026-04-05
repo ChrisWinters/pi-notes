@@ -6,7 +6,6 @@ This directory contains durable project documentation and execution plans.
 
 - `docs/plans/active/` — active execution plans
 - `docs/plans/completed/` — completed plans
-- `docs/references/` — local snapshots of upstream references
 
 ## Current active plan
 
