@@ -89,7 +89,7 @@ Status legend: `ready` | `in_progress` | `blocked` | `done`
   - evidence log: `docs/plans/active/2026-04-05-audit-remediation/evidence/t-904-regression-reliability-tests.md`
 
 ## T-905 — Refactor command router for maintainability
-- Status: ready
+- Status: done
 - Story: 4
 - Goal: Reduce complexity and improve extensibility.
 - Scope:
@@ -100,9 +100,14 @@ Status legend: `ready` | `in_progress` | `blocked` | `done`
   - `src/commands/handlers/*.ts`
   - `src/commands/parser.ts`
 - Validation:
-  - command tests unchanged or expanded; all passing
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run test`
+  - ✅ `npm run build`
+  - ✅ command behavior preserved with existing/expanded tests passing
 - Evidence:
-  - file/module map and test output
+  - thin router + handler split under `src/commands/`
+  - evidence log: `docs/plans/active/2026-04-05-audit-remediation/evidence/t-905-command-refactor.md`
 
 ## T-906 — Update docs for parser/race-safety changes
 - Status: ready
