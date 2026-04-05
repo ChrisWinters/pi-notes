@@ -38,7 +38,7 @@ Reference: `docs/references/pi-extensions.md`
   - Validation run completed locally on 2026-04-05
 
 ## T-002 — Implement core naming and path safety module
-- Status: ready
+- Status: done
 - Story: 2
 - Goal: Safe note identity and path resolution.
 - Scope:
@@ -50,9 +50,15 @@ Reference: `docs/references/pi-extensions.md`
   - typed error cases in `src/core/errors.ts`
   - tests in `tests/naming.test.ts`
 - Validation:
-  - unit tests for valid/invalid names and path guards
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run test`
+  - ✅ `npm run build`
 - Evidence:
-  - test output and edge-case matrix
+  - naming/path safety implementation in `src/core/naming.ts`
+  - typed validation codes in `src/core/errors.ts`
+  - expanded edge-case tests in `tests/naming.test.ts`
+  - edge-case matrix: `docs/plans/active/2026-04-05-pi-notes-mvp/evidence/t-002-edge-case-matrix.md`
 
 ## T-003 — Implement storage layer with scope resolution
 - Status: ready
