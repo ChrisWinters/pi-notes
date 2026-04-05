@@ -1,9 +1,10 @@
 # Plan: pi-notes MVP
 
 - Plan slug: `2026-04-05-pi-notes-mvp`
-- Status: active
+- Status: completed
 - Owner: Mr. Chris + agent support
 - Created: 2026-04-05
+- Completed: 2026-04-05
 - Based on: `docs/plans/2026-04-05-pi-notes-mvp/outline.md`
 
 ## Objective

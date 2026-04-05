@@ -10,4 +10,8 @@ This directory contains durable project documentation and execution plans.
 
 ## Current active plan
 
-- `docs/plans/active/2026-04-05-pi-notes-mvp/`
+- _None currently_
+
+## Latest completed plan
+
+- `docs/plans/completed/2026-04-05-pi-notes-mvp/`
