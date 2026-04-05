@@ -1,6 +1,6 @@
 {
   "name": "@tribalnerd/pi-notes",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A Pi extension for deterministic human notes across project and global scopes.",
   "type": "module",
   "license": "MIT",
@@ -35,6 +35,11 @@
     "notes",
     "cli"
   ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*"
   },
