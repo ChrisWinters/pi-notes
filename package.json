@@ -1,6 +1,6 @@
 {
   "name": "@tribalnerd/pi-notes",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A Pi extension for deterministic human notes across project and global scopes.",
   "type": "module",
   "license": "MIT",
