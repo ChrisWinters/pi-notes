@@ -41,6 +41,14 @@ Before release:
 npm publish --access public
 ```
 
+## Release readiness checklist
+
+- [ ] quality gate passed (`lint`, `typecheck`, `test`, `build`)
+- [ ] Pi smoke test evidence logged in plan evidence folder
+- [ ] README and docs pages match command behavior
+- [ ] changelog updated for release version
+- [ ] npm metadata checked (`name`, `repository`, `homepage`, `license`)
+
 ## Post-publish checks
 
 - verify npm package metadata

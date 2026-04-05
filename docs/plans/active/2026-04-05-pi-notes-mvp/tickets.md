@@ -178,7 +178,7 @@ Reference: `docs/references/pi-extensions.md`
   - docs consistency checklist: `docs/plans/active/2026-04-05-pi-notes-mvp/evidence/t-007-docs-consistency-checklist.md`
 
 ## T-008 — Release prep and v0.1.0 readiness
-- Status: ready
+- Status: done
 - Story: 5
 - Goal: Confirm package is publicly releasable.
 - Scope:
@@ -190,6 +190,12 @@ Reference: `docs/references/pi-extensions.md`
   - changelog seed entry for `v0.1.0`
   - verification log for manual Pi command smoke test
 - Validation:
-  - all gates pass; no unresolved blockers
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run test`
+  - ✅ `npm run build`
+  - ✅ Pi CLI smoke run executed with extension loaded
 - Evidence:
-  - command outputs, checklist completion, release notes draft
+  - release readiness log: `docs/plans/active/2026-04-05-pi-notes-mvp/evidence/t-008-release-readiness.md`
+  - updated `CHANGELOG.md`
+  - updated `docs/release.md`
