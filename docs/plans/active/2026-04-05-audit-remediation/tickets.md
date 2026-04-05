@@ -1,0 +1,102 @@
+# Tickets: Audit Remediation
+
+Status legend: `ready` | `in_progress` | `blocked` | `done`
+
+## T-901 — Define option parsing contract and fix literal-flag bug
+- Status: ready
+- Story: 1
+- Goal: Ensure `--project`/`--global` are treated as options only where intended.
+- Scope:
+  - formalize parser rules (prefix-only, suffix-only, or `--` separator)
+  - implement parser update in command layer
+  - ensure literal flag-like tokens remain content in append/grep/rewrite
+- Implementation targets:
+  - parser extraction in `src/commands/*`
+  - command handlers consuming structured parse output
+  - regression tests in `tests/commands.test.ts`
+- Validation:
+  - tests for content tokens containing `--project`/`--global`
+- Evidence:
+  - parser behavior matrix + test output
+
+## T-902 — Make note creation atomic
+- Status: ready
+- Story: 2
+- Goal: Remove check-then-write create race.
+- Scope:
+  - replace existence-check create flow with atomic create semantics
+  - preserve user-facing duplicate-note error behavior
+- Implementation targets:
+  - `src/core/storage.ts`
+  - storage tests for concurrent creation behavior
+- Validation:
+  - concurrency-oriented create tests
+- Evidence:
+  - race test logs and implementation notes
+
+## T-903 — Serialize per-note mutation paths
+- Status: ready
+- Story: 2
+- Goal: Prevent lost updates on concurrent append/write.
+- Scope:
+  - add per-note mutation queue/mutex
+  - route append/write operations through serialized path
+- Implementation targets:
+  - storage mutation queue primitive in `src/core/storage.ts` (or dedicated helper)
+  - tests simulating concurrent appends
+- Validation:
+  - deterministic append results under concurrent calls
+- Evidence:
+  - concurrency test output + behavior matrix
+
+## T-904 — Expand regression and reliability tests
+- Status: ready
+- Story: 3
+- Goal: Ensure bug/race scenarios remain fixed.
+- Scope:
+  - parser regression tests
+  - create race tests
+  - append race tests
+  - maintain existing coverage
+- Implementation targets:
+  - `tests/commands.test.ts`
+  - `tests/storage.test.ts`
+- Validation:
+  - full test suite green, targeted tests exercising prior failures
+- Evidence:
+  - test logs + before/after notes
+
+## T-905 — Refactor command router for maintainability
+- Status: ready
+- Story: 4
+- Goal: Reduce complexity and improve extensibility.
+- Scope:
+  - split monolithic command file into parser + per-subcommand handlers
+  - preserve behavior and error messages unless explicitly changed
+- Implementation targets:
+  - `src/commands/notes.ts` (thin router)
+  - `src/commands/handlers/*.ts`
+  - `src/commands/parser.ts`
+- Validation:
+  - command tests unchanged or expanded; all passing
+- Evidence:
+  - file/module map and test output
+
+## T-906 — Update docs for parser/race-safety changes
+- Status: ready
+- Story: 5
+- Goal: Keep public and internal docs accurate.
+- Scope:
+  - update README + docs/commands/storage/security/release
+  - document parsing semantics and concurrency guarantees
+  - add release checklist assertions for new regressions
+- Implementation targets:
+  - `README.md`
+  - `docs/commands.md`
+  - `docs/storage.md`
+  - `docs/security.md`
+  - `docs/release.md`
+- Validation:
+  - docs reviewed against implementation and tests
+- Evidence:
+  - docs consistency checklist
