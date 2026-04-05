@@ -1,0 +1,53 @@
+{
+  "name": "pi-notes",
+  "version": "0.1.0",
+  "description": "A Pi extension for deterministic human notes across project and global scopes.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/pi-notes.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/pi-notes/issues"
+  },
+  "homepage": "https://github.com/your-username/pi-notes#readme",
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm run test && npm run build"
+  },
+  "keywords": [
+    "pi",
+    "extension",
+    "notes",
+    "cli"
+  ],
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.24.0",
+    "@mariozechner/pi-coding-agent": "*",
+    "@sinclair/typebox": "^0.34.41",
+    "@types/node": "^22.15.17",
+    "eslint": "^9.24.0",
+    "eslint-import-resolver-typescript": "^4.3.5",
+    "eslint-plugin-import": "^2.31.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.30.1",
+    "vitest": "^3.1.1"
+  }
+}

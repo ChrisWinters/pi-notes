@@ -13,7 +13,7 @@ Reference: `docs/references/pi-extensions.md`
 - Document command-collision behavior (`/notes` may become `/notes:1` if duplicated).
 
 ## T-001 — Scaffold package and strict quality baseline
-- Status: ready
+- Status: done
 - Story: 1
 - Goal: Create publish-ready package skeleton and quality gates.
 - Scope:
@@ -27,10 +27,15 @@ Reference: `docs/references/pi-extensions.md`
   - baseline docs: `docs/architecture.md`, `docs/commands.md`, `docs/storage.md`, `docs/security.md`, `docs/release.md`
   - CI starter workflow in `.github/workflows/ci.yml`
 - Validation:
-  - scripts execute (even if some are placeholder-failing before implementation)
-  - lint/typecheck config load successfully
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run test`
+  - ✅ `npm run build`
 - Evidence:
-  - commits, config file list, command output snippets
+  - Scaffold added: `package.json`, `tsconfig.json`, `tsconfig.build.json`, `eslint.config.mjs`, `.github/workflows/ci.yml`
+  - Source skeleton added under `src/`
+  - Baseline docs + project policies added (`README.md`, `AGENTS.md`, `docs/*.md`)
+  - Validation run completed locally on 2026-04-05
 
 ## T-002 — Implement core naming and path safety module
 - Status: ready
