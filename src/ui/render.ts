@@ -25,3 +25,16 @@ export function renderNoteDetails(note: StoredNote): string {
     note.markdown
   ].join("\n");
 }
+
+export function renderGrepResults(query: string, notes: readonly StoredNote[]): string {
+  if (notes.length === 0) {
+    return `No notes matched query: ${query}`;
+  }
+
+  const lines = [`Search results for: ${query}`];
+  for (const note of notes) {
+    lines.push(`- ${renderScopeLabel(note.scope)} ${note.fileName}`);
+  }
+
+  return lines.join("\n");
+}

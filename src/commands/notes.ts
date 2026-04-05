@@ -3,7 +3,7 @@ import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import { NotesError } from "../core/errors.js";
 import type { NotesScope, ScopeSelection } from "../core/storage.js";
 import { NotesStorage, resolveScopePreference } from "../core/storage.js";
-import { renderNoteDetails, renderNotesList, renderScopeLabel } from "../ui/render.js";
+import { renderGrepResults, renderNoteDetails, renderNotesList, renderScopeLabel } from "../ui/render.js";
 
 const NOTES_USAGE = [
   "Usage:",
@@ -191,8 +191,20 @@ export async function handleNotesCommand(args: string, ctx: ExtensionCommandCont
       return;
     }
 
-    if (subcommand === "grep" || subcommand === "rewrite") {
-      ctx.ui.notify(`Not implemented yet: /notes ${subcommand}`, "warning");
+    if (subcommand === "grep") {
+      const query = rest.join(" ").trim();
+      if (query.length === 0) {
+        ctx.ui.notify("Missing query for /notes grep.", "error");
+        return;
+      }
+
+      const matches = await storage.grepNotes(query, parsed.scopeSelection);
+      ctx.ui.notify(renderGrepResults(query, matches), "info");
+      return;
+    }
+
+    if (subcommand === "rewrite") {
+      ctx.ui.notify("Not implemented yet: /notes rewrite", "warning");
       return;
     }
 

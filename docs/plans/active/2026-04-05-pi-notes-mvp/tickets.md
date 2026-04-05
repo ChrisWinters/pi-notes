@@ -111,7 +111,7 @@ Reference: `docs/references/pi-extensions.md`
   - behavior matrix: `docs/plans/active/2026-04-05-pi-notes-mvp/evidence/t-004-command-behavior.md`
 
 ## T-005 — Implement deterministic `/notes` commands (part 2)
-- Status: ready
+- Status: done
 - Story: 3
 - Goal: Add search and polish command UX.
 - Scope:
@@ -123,9 +123,16 @@ Reference: `docs/references/pi-extensions.md`
   - search formatting in `src/ui/render.ts`
   - tests for query parsing and scope-specific results in `tests/commands.test.ts`
 - Validation:
-  - command tests for hit/no-hit/invalid query paths
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run test`
+  - ✅ `npm run build`
 - Evidence:
-  - test logs + UX examples in docs
+  - grep command handling in `src/commands/notes.ts`
+  - storage search helper in `src/core/storage.ts`
+  - grep rendering in `src/ui/render.ts`
+  - command coverage in `tests/commands.test.ts`
+  - behavior matrix: `docs/plans/active/2026-04-05-pi-notes-mvp/evidence/t-005-grep-and-ux.md`
 
 ## T-006 — Implement `/notes rewrite` preview + confirm flow
 - Status: ready

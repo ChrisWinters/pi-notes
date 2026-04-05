@@ -226,6 +226,19 @@ export class NotesStorage {
     return [...merged.values()].sort((a, b) => a.fileName.localeCompare(b.fileName));
   }
 
+  public async grepNotes(query: string, selection: ScopeSelection): Promise<readonly StoredNote[]> {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.length === 0) {
+      throw new NotesError("Search query cannot be empty.");
+    }
+
+    const notes = await this.listNotes(selection);
+    return notes.filter((note) => {
+      const haystack = `${note.fileName}\n${note.markdown}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }
+
   private async readFromScope(scope: NotesScope, fileName: string): Promise<StoredNote | null> {
     const path = this.getNotePath(scope, fileName);
 

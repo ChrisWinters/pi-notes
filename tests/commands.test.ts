@@ -98,4 +98,55 @@ describe("handleNotesCommand", () => {
     expect(messages.some((message) => message.includes("Deleted [project] remove-me.md"))).toBe(true);
     expect(messages.some((message) => message.includes("Note not found: remove-me"))).toBe(true);
   });
+
+  it("returns grep hits for matching query", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("new launch-notes", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("append launch-notes shipping-checklist", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("grep checklist", ctx as unknown as ExtensionCommandContext);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Search results for: checklist"))).toBe(true);
+    expect(messages.some((message) => message.includes("[project] launch-notes.md"))).toBe(true);
+  });
+
+  it("returns no-hit message for grep misses", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("new qa-notes", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("grep no-such-term", ctx as unknown as ExtensionCommandContext);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("No notes matched query: no-such-term"))).toBe(true);
+  });
+
+  it("respects scope flags for grep results", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("new context --project", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("append context project-term", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("new context --global", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("append context global-term --global", ctx as unknown as ExtensionCommandContext);
+
+    await handleNotesCommand("grep global-term --project", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("grep global-term --global", ctx as unknown as ExtensionCommandContext);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("No notes matched query: global-term"))).toBe(true);
+    expect(messages.some((message) => message.includes("[global] context.md"))).toBe(true);
+  });
+
+  it("returns error for invalid grep query", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("grep", ctx as unknown as ExtensionCommandContext);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Missing query for /notes grep."))).toBe(true);
+  });
 });
