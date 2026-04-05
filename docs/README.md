@@ -14,4 +14,8 @@ This directory contains durable project documentation and execution plans.
 
 ## Latest completed plan
 
+- `docs/plans/completed/2026-04-05-audit-remediation/`
+
+## Previous completed plan
+
 - `docs/plans/completed/2026-04-05-pi-notes-mvp/`

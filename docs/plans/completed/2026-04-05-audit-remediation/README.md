@@ -1,9 +1,10 @@
 # Plan: Audit Remediation
 
 - Plan slug: `2026-04-05-audit-remediation`
-- Status: active
+- Status: completed
 - Owner: Mr. Chris + agent support
 - Created: 2026-04-05
+- Completed: 2026-04-05
 - Based on audit: `docs/plans/2026-04-05-audit/audit.md`
 
 ## Objective
