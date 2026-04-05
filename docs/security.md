@@ -34,6 +34,11 @@ When `ctx.hasUI` is false, confirm-gated commands are blocked with explicit mess
 - `/notes rm`
 - `/notes rewrite`
 
+## Concurrency hardening
+
+- atomic file creation is used for note creation to reduce TOCTOU risk
+- mutation operations are serialized per target key to reduce lost-update races
+
 ## Privacy
 
 Storage locations:

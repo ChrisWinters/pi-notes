@@ -26,6 +26,18 @@
 - `--global` -> only `~/.pi/notes/`
 - no flag -> read default: project first, then global fallback
 
+## Option parsing semantics
+
+- scope flags are parsed as options only at argument edges (leading/trailing positions)
+- flag-like tokens in the middle of content are preserved literally
+- `--` marks end-of-options; everything after it is treated as literal content
+
+Examples:
+
+- `/notes append daily keep --global token` keeps `--global` in note content
+- `/notes append daily note --global` applies global scope option
+- `/notes grep -- --global` searches for literal `--global`
+
 ## UX behavior
 
 - `ls` returns scope-tagged entries (`[project]` / `[global]`)

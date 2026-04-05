@@ -27,6 +27,8 @@ Before release:
 - README command reference matches implementation
 - `docs/commands.md` and `docs/storage.md` match behavior
 - security docs cover confirm-gated flows and non-interactive behavior
+- parser semantics (`--` handling, edge-only scope flags) are documented
+- concurrency guarantees (atomic create + serialized mutations) are documented
 - plan tickets and evidence are current
 
 ## Versioning
@@ -46,6 +48,8 @@ npm publish --access public
 - [ ] quality gate passed (`lint`, `typecheck`, `test`, `build`)
 - [ ] Pi smoke test evidence logged in plan evidence folder
 - [ ] README and docs pages match command behavior
+- [ ] parser regression tests pass (literal flag-token + `--` cases)
+- [ ] concurrency regression tests pass (atomic create + concurrent append)
 - [ ] changelog updated for release version
 - [ ] npm metadata checked (`name`, `repository`, `homepage`, `license`)
 

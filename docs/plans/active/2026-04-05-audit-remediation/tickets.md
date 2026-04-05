@@ -110,7 +110,7 @@ Status legend: `ready` | `in_progress` | `blocked` | `done`
   - evidence log: `docs/plans/active/2026-04-05-audit-remediation/evidence/t-905-command-refactor.md`
 
 ## T-906 — Update docs for parser/race-safety changes
-- Status: ready
+- Status: done
 - Story: 5
 - Goal: Keep public and internal docs accurate.
 - Scope:
@@ -124,6 +124,11 @@ Status legend: `ready` | `in_progress` | `blocked` | `done`
   - `docs/security.md`
   - `docs/release.md`
 - Validation:
-  - docs reviewed against implementation and tests
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run test`
+  - ✅ `npm run build`
+  - ✅ docs reviewed against implementation and tests
 - Evidence:
-  - docs consistency checklist
+  - docs updates in README + docs pages
+  - checklist: `docs/plans/active/2026-04-05-audit-remediation/evidence/t-906-docs-consistency-checklist.md`

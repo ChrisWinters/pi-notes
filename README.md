@@ -2,7 +2,7 @@
 
 `pi-notes` is a Pi extension for human-focused notes with deterministic command flows, explicit scope handling, and safety-first mutation rules.
 
-> Status: MVP plan completed (`docs/plans/completed/2026-04-05-pi-notes-mvp/`).
+> Status: MVP shipped; audit-remediation plan active (`docs/plans/active/2026-04-05-audit-remediation/`).
 
 ## Features
 
@@ -34,6 +34,12 @@ Flags:
 
 - `--project` -> project scope only
 - `--global` -> global scope only
+
+Parsing semantics (audit-remediation update):
+
+- scope flags are parsed at argument edges (leading/trailing option positions)
+- mid-content flag-like tokens are preserved as literal content
+- use `--` to force all following tokens to be treated literally
 
 ### Rewrite behavior (current MVP)
 
@@ -82,5 +88,5 @@ npm run build
 
 ## Planning and specs
 
+- Active remediation plan: `docs/plans/active/2026-04-05-audit-remediation/`
 - Latest completed plan: `docs/plans/completed/2026-04-05-pi-notes-mvp/`
-- Ticket history: `docs/plans/completed/2026-04-05-pi-notes-mvp/tickets.md`

@@ -56,3 +56,9 @@ Optional keys:
 ## Mutation behavior
 
 All write paths (`writeNote`, `appendToNote`, rewrite apply) refresh `updated` timestamp before persistence.
+
+## Concurrency guarantees (audit-remediation update)
+
+- `createNote` uses atomic exclusive creation (`wx`) to avoid check-then-write races.
+- `writeNote` and `appendToNote` are serialized through per-key mutation queues.
+- Concurrent appends to the same note are executed sequentially to prevent lost updates.
