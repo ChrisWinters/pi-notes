@@ -85,7 +85,7 @@ Reference: `docs/references/pi-extensions.md`
   - behavior matrix: `docs/plans/active/2026-04-05-pi-notes-mvp/evidence/t-003-storage-scope-matrix.md`
 
 ## T-004 — Implement deterministic `/notes` commands (part 1)
-- Status: ready
+- Status: done
 - Story: 3
 - Goal: Ship deterministic read/create/update/delete basics.
 - Scope:
@@ -100,9 +100,15 @@ Reference: `docs/references/pi-extensions.md`
   - UI confirm handling for `rm` with non-interactive fallback (`ctx.hasUI` behavior documented)
   - tests in `tests/commands.test.ts`
 - Validation:
-  - command tests and manual smoke checks
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run test`
+  - ✅ `npm run build`
 - Evidence:
-  - command output captures and test logs
+  - deterministic command routing + scope flag parsing in `src/commands/notes.ts`
+  - list/show rendering helpers in `src/ui/render.ts`
+  - command coverage in `tests/commands.test.ts`
+  - behavior matrix: `docs/plans/active/2026-04-05-pi-notes-mvp/evidence/t-004-command-behavior.md`
 
 ## T-005 — Implement deterministic `/notes` commands (part 2)
 - Status: ready
