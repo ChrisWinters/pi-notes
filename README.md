@@ -2,12 +2,9 @@
 
 A human-first notes extension for [Pi](https://github.com/badlogic/pi-mono), built to keep quick notes organized, searchable, and safe directly inside your Pi workflow.
 
-- Pi project: https://github.com/badlogic/pi-mono
-- pi-notes repo: https://github.com/ChrisWinters/pi-notes
-
 ## Summary
 
-`pi-notes` adds a `/notes` command family to Pi so you can create, read, update, search, and safely remove notes without leaving your terminal flow.
+[pi-notes](https://github.com/ChrisWinters/pi-notes) adds a `/notes` command family to Pi so you can create, read, update, search, and safely remove notes without leaving your terminal flow.
 
 Notes are stored in markdown and can live at:
 
@@ -80,9 +77,6 @@ Parser semantics:
 - Security model: `docs/security.md`
 - Architecture: `docs/architecture.md`
 - Release guide: `docs/release.md`
-- Plan history:
-  - `docs/plans/completed/2026-04-05-pi-notes-mvp/`
-  - `docs/plans/completed/2026-04-05-audit-remediation/`
 
 ## License
 
