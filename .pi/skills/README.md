@@ -4,9 +4,7 @@ This directory contains project-local Pi skills.
 
 ## Included skills
 
-- `task-planner`
-  - Path: `.pi/skills/task-planner/SKILL.md`
-  - Purpose: plan-driven execution in docs-native repositories
+- _None project-local currently._
 
 ## How to use
 
@@ -19,7 +17,7 @@ Pi may also auto-select the skill when your request matches its description.
 
 ## Expected project conventions
 
-`task-planner` works best when the repo has:
+When using a planning skill (project-local or global), it works best when the repo has:
 
 - `docs/plans/active/` for active plans
 - `docs/plans/completed/` for completed plans
@@ -46,7 +44,7 @@ Inside each active plan folder:
 - `stories.md` — user stories/slices
 - `tickets.md` — execution truth (status, blockers, evidence)
 
-## Operating expectations (task-planner)
+## Operating expectations (planning skills)
 
 For each ticket-sized slice:
 
@@ -61,4 +59,4 @@ For each ticket-sized slice:
 
 - Keep skills general unless the project requires strict custom rules.
 - Prefer project-local skills (`.pi/skills`) for repo-specific workflows.
-- If conventions change, update both this README and the related `SKILL.md`.
+- If conventions change, update this README.
