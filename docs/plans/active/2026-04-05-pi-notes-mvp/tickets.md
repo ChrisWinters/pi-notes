@@ -1,0 +1,158 @@
+# Tickets: pi-notes MVP
+
+Status legend: `ready` | `in_progress` | `blocked` | `done`
+
+## Pi alignment checklist (applies to all tickets)
+
+Reference: `docs/references/pi-extensions.md`
+
+- Use `pi.registerCommand("notes", ...)` for command entrypoint.
+- Keep extension export shape compatible with Pi extension loader.
+- Ensure extension is installable/discoverable in project-local Pi usage.
+- Confirm-gated actions (`rm`, `rewrite apply`) must account for `ctx.hasUI` behavior.
+- Document command-collision behavior (`/notes` may become `/notes:1` if duplicated).
+
+## T-001 — Scaffold package and strict quality baseline
+- Status: ready
+- Story: 1
+- Goal: Create publish-ready package skeleton and quality gates.
+- Scope:
+  - create `package.json` with scripts (`lint`, `lint:fix`, `typecheck`, `test`, `build`, `prepublishOnly`)
+  - add strict `tsconfig.json`
+  - add strict ESLint config
+  - add `.gitignore`, `README.md`, `AGENTS.md`, initial `docs/*` stubs
+- Implementation targets:
+  - `src/index.ts` extension entrypoint skeleton (`export default function (pi) { ... }`)
+  - `package.json` with publish metadata + `type: "module"`
+  - baseline docs: `docs/architecture.md`, `docs/commands.md`, `docs/storage.md`, `docs/security.md`, `docs/release.md`
+  - CI starter workflow in `.github/workflows/ci.yml`
+- Validation:
+  - scripts execute (even if some are placeholder-failing before implementation)
+  - lint/typecheck config load successfully
+- Evidence:
+  - commits, config file list, command output snippets
+
+## T-002 — Implement core naming and path safety module
+- Status: ready
+- Story: 2
+- Goal: Safe note identity and path resolution.
+- Scope:
+  - slug/normalize note names
+  - enforce `.md` extension internally
+  - reject traversal, absolute paths, and invalid names
+- Implementation targets:
+  - `src/core/naming.ts`
+  - typed error cases in `src/core/errors.ts`
+  - tests in `tests/naming.test.ts`
+- Validation:
+  - unit tests for valid/invalid names and path guards
+- Evidence:
+  - test output and edge-case matrix
+
+## T-003 — Implement storage layer with scope resolution
+- Status: ready
+- Story: 2
+- Goal: Reliable project/global note storage operations.
+- Scope:
+  - resolve note paths with default precedence (project -> global)
+  - support `--project` and `--global` forcing behavior
+  - create/read/write/delete/list helpers
+  - update frontmatter `updated` timestamp on mutation
+- Implementation targets:
+  - `src/core/storage.ts` for path resolution + file operations
+  - `src/core/format.ts` for markdown/frontmatter read-write
+  - `tests/storage.test.ts` and `tests/format.test.ts`
+- Validation:
+  - unit tests across both scopes and fallback behavior
+- Evidence:
+  - storage tests + sample note fixtures
+
+## T-004 — Implement deterministic `/notes` commands (part 1)
+- Status: ready
+- Story: 3
+- Goal: Ship deterministic read/create/update/delete basics.
+- Scope:
+  - `/notes ls`
+  - `/notes show <name>`
+  - `/notes new <name>`
+  - `/notes append <name> <text>`
+  - `/notes rm <name>` with confirmation
+- Implementation targets:
+  - `pi.registerCommand("notes", ...)` routing parser in `src/commands/notes.ts`
+  - output formatter in `src/ui/render.ts`
+  - UI confirm handling for `rm` with non-interactive fallback (`ctx.hasUI` behavior documented)
+  - tests in `tests/commands.test.ts`
+- Validation:
+  - command tests and manual smoke checks
+- Evidence:
+  - command output captures and test logs
+
+## T-005 — Implement deterministic `/notes` commands (part 2)
+- Status: ready
+- Story: 3
+- Goal: Add search and polish command UX.
+- Scope:
+  - `/notes grep <query>`
+  - display scope marker (`[project]`/`[global]`)
+  - error/empty-state UX consistency
+- Implementation targets:
+  - command handler extension in `src/commands/notes.ts`
+  - search formatting in `src/ui/render.ts`
+  - tests for query parsing and scope-specific results in `tests/commands.test.ts`
+- Validation:
+  - command tests for hit/no-hit/invalid query paths
+- Evidence:
+  - test logs + UX examples in docs
+
+## T-006 — Implement `/notes rewrite` preview + confirm flow
+- Status: ready
+- Story: 4
+- Goal: Safe AI-assisted mutation flow.
+- Scope:
+  - generate rewrite proposal from note + instruction
+  - present preview/diff
+  - require explicit approval before write
+  - support cancel/no-op path cleanly
+- Implementation targets:
+  - rewrite subcommand handler in `src/commands/notes.ts`
+  - deterministic apply stage using existing storage layer only after explicit approval
+  - preview renderer in `src/ui/render.ts`
+  - tests for approval, rejection, and missing-note cases
+- Validation:
+  - tests for approve/decline/missing-note scenarios
+- Evidence:
+  - test logs + sample rewrite transcript
+
+## T-007 — Documentation completion and consistency pass
+- Status: ready
+- Story: 5
+- Goal: Public-facing docs match implementation.
+- Scope:
+  - finish README install/usage sections
+  - finalize docs: architecture, commands, storage, security, release
+  - ensure examples reflect actual command grammar
+- Implementation targets:
+  - add "Pi compliance" note referencing `docs/references/pi-extensions.md`
+  - include command-collision note (`/notes`, `/notes:1`) in docs
+  - include non-interactive behavior notes for confirm-gated actions
+- Validation:
+  - docs reviewed against command behavior and tests
+- Evidence:
+  - docs checklist
+
+## T-008 — Release prep and v0.1.0 readiness
+- Status: ready
+- Story: 5
+- Goal: Confirm package is publicly releasable.
+- Scope:
+  - run full quality gate (`lint`, `typecheck`, `test`, `build`)
+  - run manual smoke test in Pi
+  - prepare changelog entry and release checklist
+- Implementation targets:
+  - release checklist doc (`docs/release.md`) with npm publish steps
+  - changelog seed entry for `v0.1.0`
+  - verification log for manual Pi command smoke test
+- Validation:
+  - all gates pass; no unresolved blockers
+- Evidence:
+  - command outputs, checklist completion, release notes draft
