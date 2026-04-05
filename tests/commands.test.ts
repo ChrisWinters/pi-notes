@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -21,31 +21,51 @@ interface TestContext {
 }
 
 const roots: string[] = [];
+const originalHome = process.env["HOME"];
 
 async function createTempCwd(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "pi-notes-command-test-"));
   roots.push(root);
+  process.env["HOME"] = root;
   return join(root, "project");
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function createContext(
   cwd: string,
   hasUI: boolean,
   confirmResult: boolean,
-  editorResult?: string
+  options?: {
+    readonly editorResult?: string;
+    readonly editorImpl?: (title: string, prefilled: string) => Promise<string | undefined>;
+  }
 ): TestContext {
+  const editor =
+    options?.editorImpl ??
+    vi.fn((_title: string, prefilled: string) => Promise.resolve(options?.editorResult ?? prefilled));
+
   return {
     cwd,
     hasUI,
     ui: {
       notify: vi.fn(),
       confirm: vi.fn(() => Promise.resolve(confirmResult)),
-      editor: vi.fn((_title: string, prefilled: string) => Promise.resolve(editorResult ?? prefilled))
+      editor: vi.fn(editor)
     }
   };
 }
 
 afterEach(async () => {
+  process.env["HOME"] = originalHome;
+
   while (roots.length > 0) {
     const root = roots.pop();
     if (root !== undefined) {
@@ -200,7 +220,7 @@ describe("handleNotesCommand", () => {
       "Updated body"
     ].join("\n");
 
-    const ctx = createContext(cwd, true, true, rewritten);
+    const ctx = createContext(cwd, true, true, { editorResult: rewritten });
 
     await handleNotesCommand("new rewrite-flags", ctx as unknown as ExtensionCommandContext);
     await handleNotesCommand(
@@ -223,7 +243,7 @@ describe("handleNotesCommand", () => {
       "Updated content"
     ].join("\n");
 
-    const ctx = createContext(cwd, true, true, rewritten);
+    const ctx = createContext(cwd, true, true, { editorResult: rewritten });
 
     await handleNotesCommand("new rewrite-me", ctx as unknown as ExtensionCommandContext);
     await handleNotesCommand(
@@ -243,7 +263,7 @@ describe("handleNotesCommand", () => {
 
   it("cancels rewrite when confirmation is denied", async () => {
     const cwd = await createTempCwd();
-    const ctx = createContext(cwd, true, false, "# changed");
+    const ctx = createContext(cwd, true, false, { editorResult: "# changed" });
 
     await handleNotesCommand("new no-rewrite", ctx as unknown as ExtensionCommandContext);
     await handleNotesCommand(
@@ -263,5 +283,145 @@ describe("handleNotesCommand", () => {
 
     const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
     expect(messages.some((message) => message.includes("Note not found: missing-note"))).toBe(true);
+  });
+
+  it("shows usage for explicit help aliases", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("help", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("commands", ctx as unknown as ExtensionCommandContext);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("/notes setup"))).toBe(true);
+    expect(messages.some((message) => message.includes("/notes uninstall"))).toBe(true);
+  });
+
+  it("runs setup idempotently and provides follow-up guidance", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("setup", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("setup", ctx as unknown as ExtensionCommandContext);
+
+    const projectPath = join(cwd, ".pi", "notes");
+    const globalPath = join(process.env["HOME"] ?? "", ".pi", "notes");
+    const starterPath = join(globalPath, "note.md");
+
+    expect(await pathExists(projectPath)).toBe(true);
+    expect(await pathExists(globalPath)).toBe(true);
+    expect(await pathExists(starterPath)).toBe(true);
+
+    const starter = await readFile(starterPath, "utf8");
+    expect(starter).toContain("# Welcome to notes");
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Run /notes show note --global"))).toBe(true);
+    expect(messages.some((message) => message.includes("starter note already exists"))).toBe(true);
+  });
+
+  it("edits markdown while preserving multi-line content", async () => {
+    const cwd = await createTempCwd();
+    const edited = [
+      "---",
+      "title: formatting",
+      "updated: 2026-04-05T12:00:00.000Z",
+      "---",
+      "# formatting",
+      "",
+      "Paragraph one.",
+      "",
+      "Paragraph two with spacing."
+    ].join("\n");
+    const ctx = createContext(cwd, true, true, { editorResult: edited });
+
+    await handleNotesCommand("new formatting", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("edit formatting", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("show formatting", ctx as unknown as ExtensionCommandContext);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Edited [project] formatting.md"))).toBe(true);
+    expect(messages.some((message) => message.includes("Paragraph one.\n\nParagraph two with spacing."))).toBe(true);
+  });
+
+  it("cancels edit when editor returns undefined", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true, {
+      editorImpl: () => Promise.resolve(undefined)
+    });
+
+    await handleNotesCommand("new keep-original", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("append keep-original original-body", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("edit keep-original", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("show keep-original", ctx as unknown as ExtensionCommandContext);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Edit cancelled."))).toBe(true);
+    expect(messages.some((message) => message.includes("original-body"))).toBe(true);
+  });
+
+  it("moves a note from project scope to global scope", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("new transfer", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("move transfer --to-global --project", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("show transfer --global", ctx as unknown as ExtensionCommandContext);
+
+    const projectPath = join(cwd, ".pi", "notes", "transfer.md");
+    expect(await pathExists(projectPath)).toBe(false);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Moved [project] transfer.md -> [global]"))).toBe(true);
+    expect(messages.some((message) => message.includes("[global] transfer.md"))).toBe(true);
+  });
+
+  it("requires explicit destination for move", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("new move-me", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("move move-me", ctx as unknown as ExtensionCommandContext);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Missing move destination"))).toBe(true);
+  });
+
+  it("refuses uninstall when UI is unavailable", async () => {
+    const cwd = await createTempCwd();
+    const interactiveCtx = createContext(cwd, true, true);
+    await handleNotesCommand("new remove-dir", interactiveCtx as unknown as ExtensionCommandContext);
+
+    const nonInteractiveCtx = createContext(cwd, false, true);
+    await handleNotesCommand("uninstall", nonInteractiveCtx as unknown as ExtensionCommandContext);
+
+    const messages = nonInteractiveCtx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("requires an interactive UI"))).toBe(true);
+  });
+
+  it("uninstall defaults to project notes only", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("new project-remove", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("new global-keep --global", ctx as unknown as ExtensionCommandContext);
+
+    await handleNotesCommand("uninstall", ctx as unknown as ExtensionCommandContext);
+
+    const projectPath = join(cwd, ".pi", "notes");
+    const globalNotePath = join(process.env["HOME"] ?? "", ".pi", "notes", "global-keep.md");
+    expect(await pathExists(projectPath)).toBe(false);
+    expect(await pathExists(globalNotePath)).toBe(true);
+  });
+
+  it("uninstalls global notes when --global is provided", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("new global-remove --global", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("uninstall --global", ctx as unknown as ExtensionCommandContext);
+
+    const globalPath = join(process.env["HOME"] ?? "", ".pi", "notes");
+    expect(await pathExists(globalPath)).toBe(false);
   });
 });

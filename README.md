@@ -22,13 +22,20 @@ pi install @ChrisWinters/pi-notes
 
 ## Commands
 
+- `/notes` (usage/help)
+- `/notes help`
+- `/notes commands`
+- `/notes setup`
 - `/notes ls [--project|--global]`
 - `/notes show <name> [--project|--global]`
 - `/notes new <name> [--project|--global]`
+- `/notes edit <name> [--project|--global]`
 - `/notes append <name> <text> [--project|--global]`
 - `/notes rm <name> [--project|--global]`
 - `/notes grep <query> [--project|--global]`
 - `/notes rewrite <name> <instruction> [--project|--global]`
+- `/notes move <name> --to-global|--to-project [--project|--global] [--overwrite]`
+- `/notes uninstall [--project] [--global]`
 
 ### Scope behavior
 
@@ -45,6 +52,7 @@ Flags:
 Parser semantics:
 
 - scope flags are parsed only at argument edges (leading/trailing)
+- move flags (`--to-global`, `--to-project`, `--overwrite`) are parsed only for `/notes move` and only at argument edges
 - flag-like tokens inside content are preserved as literal text
 - use `--` to force all following tokens to be treated literally
 
@@ -60,7 +68,9 @@ Parser semantics:
 - Dual-scope storage (project + global)
 - Safe name normalization and path protections
 - Atomic note creation and serialized note mutations
-- Confirm-gated destructive and rewrite operations
+- Confirm-gated destructive operations (`rm`, `uninstall`, overwrite move)
+- Markdown-preserving editor workflow with `/notes edit`
+- Bootstrap setup flow with starter global note (`/notes setup`)
 - Markdown + frontmatter note format
 
 ## Docs

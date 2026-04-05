@@ -5,6 +5,8 @@
 - Project scope: `<cwd>/.pi/notes/`
 - Global scope: `~/.pi/notes/`
 
+`/notes setup` initializes both directories if missing.
+
 ## Scope resolution
 
 `NotesStorage` applies these rules:
@@ -55,10 +57,23 @@ Optional keys:
 
 ## Mutation behavior
 
-All write paths (`writeNote`, `appendToNote`, rewrite apply) refresh `updated` timestamp before persistence.
+All write paths (`writeNote`, `appendToNote`, rewrite apply, edit apply) refresh `updated` timestamp before persistence.
+
+`move` preserves markdown content/frontmatter as-is while changing scope location.
+
+## Setup and lifecycle operations
+
+- `setup` is idempotent:
+  - ensures `<cwd>/.pi/notes`
+  - ensures `~/.pi/notes`
+  - creates `~/.pi/notes/note.md` only if absent
+- `uninstall` removes scope directories recursively after confirmation.
+  - default target (no flags): project scope only
+  - `--global`: global scope only
+  - `--project --global`: both scopes
 
 ## Concurrency guarantees (audit-remediation update)
 
 - `createNote` uses atomic exclusive creation (`wx`) to avoid check-then-write races.
-- `writeNote` and `appendToNote` are serialized through per-key mutation queues.
+- `writeNote`, `appendToNote`, and `moveNote` are serialized through per-key mutation queues.
 - Concurrent appends to the same note are executed sequentially to prevent lost updates.

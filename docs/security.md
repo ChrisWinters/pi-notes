@@ -18,6 +18,13 @@
 - requires explicit confirmation before deletion
 - emits clear cancellation/not-found messages
 
+`/notes uninstall`:
+
+- scope-targeted recursive removal (`--project`, `--global`, or both)
+- defaults to project scope when no flag is given
+- requires explicit confirmation before deletion
+- emits clear cancellation/not-found messages
+
 ## Rewrite mutation guard
 
 `/notes rewrite`:
@@ -29,15 +36,19 @@
 
 ## Non-interactive mode behavior
 
-When `ctx.hasUI` is false, confirm-gated commands are blocked with explicit messages:
+When `ctx.hasUI` is false, confirm-gated or editor-gated commands are blocked with explicit messages:
 
 - `/notes rm`
 - `/notes rewrite`
+- `/notes edit`
+- `/notes uninstall`
+- `/notes move --overwrite`
 
 ## Concurrency hardening
 
 - atomic file creation is used for note creation to reduce TOCTOU risk
 - mutation operations are serialized per target key to reduce lost-update races
+- move operations are serialized per note key to avoid split-brain move outcomes
 
 ## Privacy
 

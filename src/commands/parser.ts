@@ -1,17 +1,45 @@
 import type { ScopeSelection } from "../core/storage.js";
 
+export interface MoveSelection {
+  readonly toProject: boolean;
+  readonly toGlobal: boolean;
+  readonly overwrite: boolean;
+}
+
 export interface ParsedNotesCommand {
   readonly subcommand: string | undefined;
   readonly args: readonly string[];
   readonly scopeSelection: ScopeSelection;
+  readonly moveSelection: MoveSelection;
 }
 
 const SCOPE_FLAG_PROJECT = "--project";
 const SCOPE_FLAG_GLOBAL = "--global";
+const MOVE_FLAG_TO_PROJECT = "--to-project";
+const MOVE_FLAG_TO_GLOBAL = "--to-global";
+const MOVE_FLAG_OVERWRITE = "--overwrite";
 const END_OF_OPTIONS = "--";
 
 function isScopeFlag(token: string): boolean {
   return token === SCOPE_FLAG_PROJECT || token === SCOPE_FLAG_GLOBAL;
+}
+
+function isMoveFlag(token: string): boolean {
+  return (
+    token === MOVE_FLAG_TO_PROJECT || token === MOVE_FLAG_TO_GLOBAL || token === MOVE_FLAG_OVERWRITE
+  );
+}
+
+function isEdgeFlagForSubcommand(token: string, subcommand: string): boolean {
+  if (isScopeFlag(token)) {
+    return true;
+  }
+
+  if (subcommand === "move") {
+    return isMoveFlag(token);
+  }
+
+  return false;
 }
 
 function parseQuotedArgs(input: string): readonly string[] {
@@ -50,53 +78,101 @@ function applyScopeFlag(token: string, selection: ScopeSelection): ScopeSelectio
   return selection;
 }
 
-function parseScopeFromEdges(
+function applyMoveFlag(token: string, selection: MoveSelection): MoveSelection {
+  if (token === MOVE_FLAG_TO_PROJECT) {
+    return {
+      ...selection,
+      toProject: true
+    };
+  }
+
+  if (token === MOVE_FLAG_TO_GLOBAL) {
+    return {
+      ...selection,
+      toGlobal: true
+    };
+  }
+
+  if (token === MOVE_FLAG_OVERWRITE) {
+    return {
+      ...selection,
+      overwrite: true
+    };
+  }
+
+  return selection;
+}
+
+function parseFlagsFromEdges(
   tokens: readonly string[],
-  initialSelection: ScopeSelection
-): { selection: ScopeSelection; args: readonly string[] } {
-  let selection = initialSelection;
+  subcommand: string,
+  initialScopeSelection: ScopeSelection,
+  initialMoveSelection: MoveSelection
+): { scopeSelection: ScopeSelection; moveSelection: MoveSelection; args: readonly string[] } {
+  let scopeSelection = initialScopeSelection;
+  let moveSelection = initialMoveSelection;
 
   let start = 0;
   let end = tokens.length - 1;
 
-  while (start <= end && isScopeFlag(tokens[start] ?? "")) {
+  while (start <= end && isEdgeFlagForSubcommand(tokens[start] ?? "", subcommand)) {
     const token = tokens[start];
     if (token !== undefined) {
-      selection = applyScopeFlag(token, selection);
+      scopeSelection = applyScopeFlag(token, scopeSelection);
+      moveSelection = applyMoveFlag(token, moveSelection);
     }
     start += 1;
   }
 
-  while (end >= start && isScopeFlag(tokens[end] ?? "")) {
+  while (end >= start && isEdgeFlagForSubcommand(tokens[end] ?? "", subcommand)) {
     const token = tokens[end];
     if (token !== undefined) {
-      selection = applyScopeFlag(token, selection);
+      scopeSelection = applyScopeFlag(token, scopeSelection);
+      moveSelection = applyMoveFlag(token, moveSelection);
     }
     end -= 1;
   }
 
   return {
-    selection,
+    scopeSelection,
+    moveSelection,
     args: tokens.slice(start, end + 1)
   };
 }
 
-function parseSubcommandArgs(tokens: readonly string[], initialSelection: ScopeSelection): {
-  selection: ScopeSelection;
-  args: readonly string[];
-} {
+function parseSubcommandArgs(
+  tokens: readonly string[],
+  subcommand: string,
+  initialScopeSelection: ScopeSelection,
+  initialMoveSelection: MoveSelection
+): { scopeSelection: ScopeSelection; moveSelection: MoveSelection; args: readonly string[] } {
   const separatorIndex = tokens.indexOf(END_OF_OPTIONS);
   if (separatorIndex === -1) {
-    return parseScopeFromEdges(tokens, initialSelection);
+    return parseFlagsFromEdges(tokens, subcommand, initialScopeSelection, initialMoveSelection);
   }
 
   const beforeSeparator = tokens.slice(0, separatorIndex);
   const afterSeparator = tokens.slice(separatorIndex + 1);
 
-  const parsed = parseScopeFromEdges(beforeSeparator, initialSelection);
+  const parsed = parseFlagsFromEdges(
+    beforeSeparator,
+    subcommand,
+    initialScopeSelection,
+    initialMoveSelection
+  );
+
   return {
-    selection: parsed.selection,
+    scopeSelection: parsed.scopeSelection,
+    moveSelection: parsed.moveSelection,
     args: [...parsed.args, ...afterSeparator]
+  };
+}
+
+function initialMoveSelection(): MoveSelection {
+  return {
+    toProject: false,
+    toGlobal: false,
+    overwrite: false
   };
 }
 
@@ -110,11 +186,12 @@ export function parseNotesCommandInput(input: string): ParsedNotesCommand {
       scopeSelection: {
         forceProject: false,
         forceGlobal: false
-      }
+      },
+      moveSelection: initialMoveSelection()
     };
   }
 
-  let selection: ScopeSelection = {
+  let scopeSelection: ScopeSelection = {
     forceProject: false,
     forceGlobal: false
   };
@@ -123,7 +200,7 @@ export function parseNotesCommandInput(input: string): ParsedNotesCommand {
   while (index < tokens.length && isScopeFlag(tokens[index] ?? "")) {
     const token = tokens[index];
     if (token !== undefined) {
-      selection = applyScopeFlag(token, selection);
+      scopeSelection = applyScopeFlag(token, scopeSelection);
     }
     index += 1;
   }
@@ -133,16 +210,18 @@ export function parseNotesCommandInput(input: string): ParsedNotesCommand {
     return {
       subcommand: undefined,
       args: [],
-      scopeSelection: selection
+      scopeSelection,
+      moveSelection: initialMoveSelection()
     };
   }
 
   const rawArgs = tokens.slice(index + 1);
-  const parsedArgs = parseSubcommandArgs(rawArgs, selection);
+  const parsedArgs = parseSubcommandArgs(rawArgs, subcommand, scopeSelection, initialMoveSelection());
 
   return {
     subcommand,
     args: parsedArgs.args,
-    scopeSelection: parsedArgs.selection
+    scopeSelection: parsedArgs.scopeSelection,
+    moveSelection: parsedArgs.moveSelection
   };
 }

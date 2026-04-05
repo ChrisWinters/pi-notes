@@ -1,5 +1,12 @@
 # Completed Plans
 
+## 2026-04-05-notes-workflow-expansion
+
+- Path: `docs/plans/completed/2026-04-05-notes-workflow-expansion/`
+- Status: completed
+- Completed: 2026-04-05
+- Summary: Added setup/help/edit/move/uninstall command surface, move-aware parser flags, idempotent bootstrap starter note, lifecycle storage operations, and full docs/test validation.
+
 ## 2026-04-05-audit-remediation
 
 - Path: `docs/plans/completed/2026-04-05-audit-remediation/`

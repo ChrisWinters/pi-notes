@@ -47,8 +47,38 @@ export interface AppendNoteInput {
   readonly updatedIso: string;
 }
 
+export interface SetupNotesInput {
+  readonly starterGlobalMarkdown: string;
+}
+
+export interface SetupNotesResult {
+  readonly projectDirectoryPath: string;
+  readonly globalDirectoryPath: string;
+  readonly starterGlobalNotePath: string;
+  readonly createdProjectDirectory: boolean;
+  readonly createdGlobalDirectory: boolean;
+  readonly createdStarterGlobalNote: boolean;
+}
+
+export interface MoveNoteInput {
+  readonly name: string;
+  readonly selection: ScopeSelection;
+  readonly destinationScope: NotesScope;
+  readonly overwrite: boolean;
+}
+
+export interface MoveNoteResult {
+  readonly source: StoredNote;
+  readonly destination: StoredNote;
+  readonly overwrittenDestination: boolean;
+}
+
 function isNotFound(error: unknown): boolean {
   return error instanceof Error && "code" in error && error.code === "ENOENT";
+}
+
+function isAlreadyExists(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "EEXIST";
 }
 
 export function resolveScopePreference(selection: ScopeSelection): NotesScope | "default" {
@@ -97,6 +127,42 @@ export class NotesStorage {
     return directory;
   }
 
+  public async setupNotes(input: SetupNotesInput): Promise<SetupNotesResult> {
+    const projectDirectoryPath = this.getNotesDirectory("project");
+    const globalDirectoryPath = this.getNotesDirectory("global");
+    const starterFileName = normalizeNoteName("note");
+    const starterGlobalNotePath = this.getNotePath("global", starterFileName);
+
+    const createdProjectDirectory = !(await this.pathExists(projectDirectoryPath));
+    await mkdir(projectDirectoryPath, { recursive: true });
+
+    const createdGlobalDirectory = !(await this.pathExists(globalDirectoryPath));
+    await mkdir(globalDirectoryPath, { recursive: true });
+
+    let createdStarterGlobalNote = false;
+    let handle: FileHandle | undefined;
+    try {
+      handle = await open(starterGlobalNotePath, "wx");
+      await handle.writeFile(input.starterGlobalMarkdown, "utf8");
+      createdStarterGlobalNote = true;
+    } catch (error: unknown) {
+      if (!isAlreadyExists(error)) {
+        throw error;
+      }
+    } finally {
+      await handle?.close();
+    }
+
+    return {
+      projectDirectoryPath,
+      globalDirectoryPath,
+      starterGlobalNotePath,
+      createdProjectDirectory,
+      createdGlobalDirectory,
+      createdStarterGlobalNote
+    };
+  }
+
   public async noteExists(scope: NotesScope, fileName: string): Promise<boolean> {
     assertSafeNoteFileName(fileName);
 
@@ -127,7 +193,7 @@ export class NotesStorage {
       handle = await open(targetPath, "wx");
       await handle.writeFile(markdown, "utf8");
     } catch (error: unknown) {
-      if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+      if (isAlreadyExists(error)) {
         throw new NotesError(`Note already exists: ${fileName}`);
       }
 
@@ -207,6 +273,77 @@ export class NotesStorage {
 
     await rm(existing.path);
     return true;
+  }
+
+  public async removeScopeDirectory(scope: NotesScope): Promise<{ path: string; removed: boolean }> {
+    const directoryPath = this.getNotesDirectory(scope);
+
+    if (!(await this.pathExists(directoryPath))) {
+      return {
+        path: directoryPath,
+        removed: false
+      };
+    }
+
+    await rm(directoryPath, { recursive: true, force: true });
+    return {
+      path: directoryPath,
+      removed: true
+    };
+  }
+
+  public async moveNote(input: MoveNoteInput): Promise<MoveNoteResult> {
+    const fileName = normalizeNoteName(input.name);
+    const mutationKey = `move:${fileName}`;
+
+    return this.withMutationQueue(mutationKey, async () => {
+      const source = await this.readNote(input.name, input.selection);
+      if (source === null) {
+        throw new NotesError(`Note not found: ${input.name}`);
+      }
+
+      if (source.scope === input.destinationScope) {
+        throw new NotesError(`Note already exists in ${input.destinationScope} scope: ${source.fileName}`);
+      }
+
+      await this.ensureScopeDirectory(input.destinationScope);
+      const destinationPath = this.getNotePath(input.destinationScope, source.fileName);
+      const destinationExists = await this.noteExists(input.destinationScope, source.fileName);
+
+      if (destinationExists && !input.overwrite) {
+        throw new NotesError(`Destination already has note: ${source.fileName}. Re-run with --overwrite.`);
+      }
+
+      if (input.overwrite) {
+        await writeFile(destinationPath, source.markdown, "utf8");
+      } else {
+        let handle: FileHandle | undefined;
+        try {
+          handle = await open(destinationPath, "wx");
+          await handle.writeFile(source.markdown, "utf8");
+        } catch (error: unknown) {
+          if (isAlreadyExists(error)) {
+            throw new NotesError(`Destination already has note: ${source.fileName}. Re-run with --overwrite.`);
+          }
+
+          throw error;
+        } finally {
+          await handle?.close();
+        }
+      }
+
+      await rm(source.path, { force: true });
+
+      return {
+        source,
+        destination: {
+          ...source,
+          path: destinationPath,
+          scope: input.destinationScope
+        },
+        overwrittenDestination: destinationExists
+      };
+    });
   }
 
   public async listNotes(selection: ScopeSelection): Promise<readonly StoredNote[]> {
@@ -301,6 +438,19 @@ export class NotesStorage {
     } catch (error: unknown) {
       if (isNotFound(error)) {
         return null;
+      }
+
+      throw error;
+    }
+  }
+
+  private async pathExists(path: string): Promise<boolean> {
+    try {
+      await access(path);
+      return true;
+    } catch (error: unknown) {
+      if (isNotFound(error)) {
+        return false;
       }
 
       throw error;

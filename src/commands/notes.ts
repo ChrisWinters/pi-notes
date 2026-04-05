@@ -25,6 +25,7 @@ export async function handleNotesCommand(args: string, ctx: ExtensionCommandCont
     await handler({
       args: parsed.args,
       scopeSelection: parsed.scopeSelection,
+      moveSelection: parsed.moveSelection,
       storage,
       ctx
     });

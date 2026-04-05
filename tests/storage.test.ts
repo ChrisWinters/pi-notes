@@ -177,4 +177,80 @@ describe("NotesStorage", () => {
       }
     });
   });
+
+  it("runs setup idempotently and does not overwrite starter note", async () => {
+    await withStorage(async (storage) => {
+      const initial = await storage.setupNotes({
+        starterGlobalMarkdown: "---\ntitle: note\nupdated: 2026-04-05T00:00:00.000Z\n---\n# first\n"
+      });
+      const second = await storage.setupNotes({
+        starterGlobalMarkdown: "---\ntitle: note\nupdated: 2026-04-05T01:00:00.000Z\n---\n# second\n"
+      });
+
+      expect(initial.createdProjectDirectory).toBe(true);
+      expect(initial.createdGlobalDirectory).toBe(true);
+      expect(initial.createdStarterGlobalNote).toBe(true);
+      expect(second.createdStarterGlobalNote).toBe(false);
+
+      const loaded = await storage.readNote("note", { forceProject: false, forceGlobal: true });
+      expect(loaded?.markdown).toContain("# first");
+      expect(loaded?.markdown).not.toContain("# second");
+    });
+  });
+
+  it("moves notes across scopes and preserves markdown", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "handoff", scope: "project" });
+      await storage.appendToNote({
+        name: "handoff",
+        text: "line-1",
+        selection: { forceProject: true, forceGlobal: false },
+        updatedIso: "2026-04-05T20:00:00.000Z"
+      });
+
+      const moved = await storage.moveNote({
+        name: "handoff",
+        selection: { forceProject: true, forceGlobal: false },
+        destinationScope: "global",
+        overwrite: false
+      });
+
+      expect(moved.source.scope).toBe("project");
+      expect(moved.destination.scope).toBe("global");
+      expect(moved.destination.markdown).toContain("line-1");
+
+      const projectRead = await storage.readNote("handoff", { forceProject: true, forceGlobal: false });
+      const globalRead = await storage.readNote("handoff", { forceProject: false, forceGlobal: true });
+      expect(projectRead).toBeNull();
+      expect(globalRead?.markdown).toContain("line-1");
+    });
+  });
+
+  it("fails move when destination exists and overwrite is disabled", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "dupe", scope: "project" });
+      await storage.createNote({ name: "dupe", scope: "global" });
+
+      await expect(
+        storage.moveNote({
+          name: "dupe",
+          selection: { forceProject: true, forceGlobal: false },
+          destinationScope: "global",
+          overwrite: false
+        })
+      ).rejects.toThrowError("Destination already has note");
+    });
+  });
+
+  it("removes a scope directory recursively", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "cleanup", scope: "project" });
+
+      const removed = await storage.removeScopeDirectory("project");
+      expect(removed.removed).toBe(true);
+
+      const notes = await storage.listNotes({ forceProject: true, forceGlobal: false });
+      expect(notes).toHaveLength(0);
+    });
+  });
 });
