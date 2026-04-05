@@ -26,7 +26,7 @@ Status legend: `ready` | `in_progress` | `blocked` | `done`
   - behavior matrix: `docs/plans/active/2026-04-05-audit-remediation/evidence/t-901-parser-behavior-matrix.md`
 
 ## T-902 — Make note creation atomic
-- Status: ready
+- Status: done
 - Story: 2
 - Goal: Remove check-then-write create race.
 - Scope:
@@ -36,9 +36,14 @@ Status legend: `ready` | `in_progress` | `blocked` | `done`
   - `src/core/storage.ts`
   - storage tests for concurrent creation behavior
 - Validation:
-  - concurrency-oriented create tests
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run test`
+  - ✅ `npm run build`
 - Evidence:
-  - race test logs and implementation notes
+  - atomic create implementation in `src/core/storage.ts`
+  - concurrent create test in `tests/storage.test.ts`
+  - evidence log: `docs/plans/active/2026-04-05-audit-remediation/evidence/t-902-atomic-create.md`
 
 ## T-903 — Serialize per-note mutation paths
 - Status: ready

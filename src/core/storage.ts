@@ -1,4 +1,5 @@
-import { access, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, open, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -113,17 +114,25 @@ export class NotesStorage {
     const fileName = normalizeNoteName(input.name);
     const targetPath = this.getNotePath(input.scope, fileName);
 
-    if (await this.noteExists(input.scope, fileName)) {
-      throw new NotesError(`Note already exists: ${fileName}`);
-    }
-
     await this.ensureScopeDirectory(input.scope);
 
     const nowIso = new Date().toISOString();
     const title = input.title?.trim().length ? input.title : input.name.trim();
     const markdown = createEmptyNoteMarkdown(title, nowIso);
 
-    await writeFile(targetPath, markdown, "utf8");
+    let handle: FileHandle | undefined;
+    try {
+      handle = await open(targetPath, "wx");
+      await handle.writeFile(markdown, "utf8");
+    } catch (error: unknown) {
+      if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+        throw new NotesError(`Note already exists: ${fileName}`);
+      }
+
+      throw error;
+    } finally {
+      await handle?.close();
+    }
 
     return {
       name: fileName.slice(0, -3),

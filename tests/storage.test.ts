@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 
 import { describe, expect, it } from "vitest";
 
+import { NotesError } from "../src/core/errors.js";
 import { parseNoteMarkdown } from "../src/core/format.js";
 import { NotesStorage, resolveScopePreference } from "../src/core/storage.js";
 
@@ -97,6 +98,29 @@ describe("NotesStorage", () => {
       expect(names).toContain("global:only-global.md");
       expect(names).toContain("project:only-project.md");
       expect(names.filter((name) => name.endsWith(":shared.md"))).toHaveLength(1);
+    });
+  });
+
+  it("creates a note atomically under concurrent create attempts", async () => {
+    await withStorage(async (storage) => {
+      const results = await Promise.allSettled([
+        storage.createNote({ name: "atomic", scope: "project" }),
+        storage.createNote({ name: "atomic", scope: "project" })
+      ]);
+
+      const fulfilled = results.filter((result) => result.status === "fulfilled");
+      const rejected = results.filter((result) => result.status === "rejected");
+
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+
+      const reason = rejected[0];
+      if (reason?.status === "rejected") {
+        expect(reason.reason).toBeInstanceOf(NotesError);
+      }
+
+      const note = await storage.readNote("atomic", { forceProject: false, forceGlobal: false });
+      expect(note).not.toBeNull();
     });
   });
 });
