@@ -4,6 +4,7 @@ import { NotesError } from "../core/errors.js";
 import type { NotesScope, ScopeSelection } from "../core/storage.js";
 import { NotesStorage, resolveScopePreference } from "../core/storage.js";
 import { renderGrepResults, renderNoteDetails, renderNotesList, renderRewritePreview, renderScopeLabel } from "../ui/render.js";
+import { parseNotesCommandInput } from "./parser.js";
 
 const NOTES_USAGE = [
   "Usage:",
@@ -15,52 +16,6 @@ const NOTES_USAGE = [
   "  /notes grep <query> [--project|--global]",
   "  /notes rewrite <name> <instruction> [--project|--global]"
 ].join("\n");
-
-function parseArgs(input: string): readonly string[] {
-  const matches = input.match(/"([^"]*)"|'([^']*)'|(\S+)/g);
-  if (matches === null) {
-    return [];
-  }
-
-  return matches.map((token) => {
-    if (
-      (token.startsWith('"') && token.endsWith('"')) ||
-      (token.startsWith("'") && token.endsWith("'"))
-    ) {
-      return token.slice(1, -1);
-    }
-
-    return token;
-  });
-}
-
-function parseScope(tokens: readonly string[]): { scopeSelection: ScopeSelection; tokens: readonly string[] } {
-  let forceProject = false;
-  let forceGlobal = false;
-  const rest: string[] = [];
-
-  for (const token of tokens) {
-    if (token === "--project") {
-      forceProject = true;
-      continue;
-    }
-
-    if (token === "--global") {
-      forceGlobal = true;
-      continue;
-    }
-
-    rest.push(token);
-  }
-
-  return {
-    scopeSelection: {
-      forceProject,
-      forceGlobal
-    },
-    tokens: rest
-  };
-}
 
 function defaultCreateScope(selection: ScopeSelection): NotesScope {
   const preference = resolveScopePreference(selection);
@@ -85,8 +40,9 @@ function requireHasUi(ctx: ExtensionCommandContext): boolean {
 }
 
 export async function handleNotesCommand(args: string, ctx: ExtensionCommandContext): Promise<void> {
-  const parsed = parseScope(parseArgs(args.trim()));
-  const [subcommand, ...rest] = parsed.tokens;
+  const parsed = parseNotesCommandInput(args);
+  const subcommand = parsed.subcommand;
+  const rest = [...parsed.args];
   const storage = new NotesStorage({ cwd: ctx.cwd });
 
   if (subcommand === undefined || subcommand.length === 0) {

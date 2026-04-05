@@ -3,7 +3,7 @@
 Status legend: `ready` | `in_progress` | `blocked` | `done`
 
 ## T-901 — Define option parsing contract and fix literal-flag bug
-- Status: ready
+- Status: done
 - Story: 1
 - Goal: Ensure `--project`/`--global` are treated as options only where intended.
 - Scope:
@@ -15,9 +15,15 @@ Status legend: `ready` | `in_progress` | `blocked` | `done`
   - command handlers consuming structured parse output
   - regression tests in `tests/commands.test.ts`
 - Validation:
-  - tests for content tokens containing `--project`/`--global`
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run test`
+  - ✅ `npm run build`
 - Evidence:
-  - parser behavior matrix + test output
+  - parser utility added: `src/commands/parser.ts`
+  - command integration: `src/commands/notes.ts`
+  - regression tests: `tests/parser.test.ts`, `tests/commands.test.ts`
+  - behavior matrix: `docs/plans/active/2026-04-05-audit-remediation/evidence/t-901-parser-behavior-matrix.md`
 
 ## T-902 — Make note creation atomic
 - Status: ready

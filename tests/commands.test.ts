@@ -80,6 +80,22 @@ describe("handleNotesCommand", () => {
     expect(notifyCalls.some((message) => message.includes("[project] daily.md"))).toBe(true);
   });
 
+  it("preserves literal scope-like tokens inside append content", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("new parser-bug", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand(
+      "append parser-bug keep --global token",
+      ctx as unknown as ExtensionCommandContext
+    );
+    await handleNotesCommand("show parser-bug", ctx as unknown as ExtensionCommandContext);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Updated [project] parser-bug.md"))).toBe(true);
+    expect(messages.some((message) => message.includes("keep --global token"))).toBe(true);
+  });
+
   it("requires interactive ui for rm", async () => {
     const cwd = await createTempCwd();
     const interactiveCtx = createContext(cwd, true, true);
