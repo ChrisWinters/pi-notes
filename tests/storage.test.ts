@@ -123,4 +123,32 @@ describe("NotesStorage", () => {
       expect(note).not.toBeNull();
     });
   });
+
+  it("serializes concurrent appends to avoid lost updates", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "race-log", scope: "project" });
+
+      await Promise.all([
+        storage.appendToNote({
+          name: "race-log",
+          text: "entry-a",
+          selection: { forceProject: false, forceGlobal: false },
+          updatedIso: "2026-04-05T20:00:00.000Z"
+        }),
+        storage.appendToNote({
+          name: "race-log",
+          text: "entry-b",
+          selection: { forceProject: false, forceGlobal: false },
+          updatedIso: "2026-04-05T20:00:01.000Z"
+        })
+      ]);
+
+      const note = await storage.readNote("race-log", { forceProject: false, forceGlobal: false });
+      expect(note).not.toBeNull();
+
+      const markdown = note?.markdown ?? "";
+      expect(markdown).toContain("entry-a");
+      expect(markdown).toContain("entry-b");
+    });
+  });
 });

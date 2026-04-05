@@ -46,7 +46,7 @@ Status legend: `ready` | `in_progress` | `blocked` | `done`
   - evidence log: `docs/plans/active/2026-04-05-audit-remediation/evidence/t-902-atomic-create.md`
 
 ## T-903 — Serialize per-note mutation paths
-- Status: ready
+- Status: done
 - Story: 2
 - Goal: Prevent lost updates on concurrent append/write.
 - Scope:
@@ -56,9 +56,14 @@ Status legend: `ready` | `in_progress` | `blocked` | `done`
   - storage mutation queue primitive in `src/core/storage.ts` (or dedicated helper)
   - tests simulating concurrent appends
 - Validation:
-  - deterministic append results under concurrent calls
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run test`
+  - ✅ `npm run build`
 - Evidence:
-  - concurrency test output + behavior matrix
+  - mutation queue + write/append routing in `src/core/storage.ts`
+  - concurrent append test in `tests/storage.test.ts`
+  - evidence log: `docs/plans/active/2026-04-05-audit-remediation/evidence/t-903-mutation-serialization.md`
 
 ## T-904 — Expand regression and reliability tests
 - Status: ready

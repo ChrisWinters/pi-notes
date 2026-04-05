@@ -68,6 +68,8 @@ export function resolveScopePreference(selection: ScopeSelection): NotesScope | 
 }
 
 export class NotesStorage {
+  private static readonly mutationQueues = new Map<string, Promise<void>>();
+
   private readonly cwd: string;
   private readonly globalNotesDir: string;
 
@@ -166,37 +168,33 @@ export class NotesStorage {
 
   public async writeNote(input: WriteNoteInput): Promise<StoredNote> {
     const fileName = normalizeNoteName(input.name);
-    const targetPath = this.getNotePath(input.scope, fileName);
+    const mutationKey = `${input.scope}:${fileName}`;
 
-    await this.ensureScopeDirectory(input.scope);
-
-    const updatedMarkdown = withUpdatedTimestamp(input.markdown, input.updatedIso);
-    await writeFile(targetPath, updatedMarkdown, "utf8");
-
-    return {
-      name: fileName.slice(0, -3),
-      fileName,
-      path: targetPath,
-      scope: input.scope,
-      markdown: updatedMarkdown
-    };
+    return this.withMutationQueue(mutationKey, async () => {
+      return this.writeNoteInternal(input);
+    });
   }
 
   public async appendToNote(input: AppendNoteInput): Promise<StoredNote> {
-    const existing = await this.readNote(input.name, input.selection);
+    const fileName = normalizeNoteName(input.name);
+    const mutationKey = `append:${fileName}`;
 
-    if (existing === null) {
-      throw new NotesError(`Cannot append. Note not found: ${input.name}`);
-    }
+    return this.withMutationQueue(mutationKey, async () => {
+      const existing = await this.readNote(input.name, input.selection);
 
-    const separator = existing.markdown.endsWith("\n") ? "" : "\n";
-    const nextMarkdown = `${existing.markdown}${separator}${input.text}\n`;
+      if (existing === null) {
+        throw new NotesError(`Cannot append. Note not found: ${input.name}`);
+      }
 
-    return this.writeNote({
-      name: existing.name,
-      markdown: nextMarkdown,
-      scope: existing.scope,
-      updatedIso: input.updatedIso
+      const separator = existing.markdown.endsWith("\n") ? "" : "\n";
+      const nextMarkdown = `${existing.markdown}${separator}${input.text}\n`;
+
+      return this.writeNoteInternal({
+        name: existing.name,
+        markdown: nextMarkdown,
+        scope: existing.scope,
+        updatedIso: input.updatedIso
+      });
     });
   }
 
@@ -246,6 +244,44 @@ export class NotesStorage {
       const haystack = `${note.fileName}\n${note.markdown}`.toLowerCase();
       return haystack.includes(normalizedQuery);
     });
+  }
+
+  private async writeNoteInternal(input: WriteNoteInput): Promise<StoredNote> {
+    const fileName = normalizeNoteName(input.name);
+    const targetPath = this.getNotePath(input.scope, fileName);
+
+    await this.ensureScopeDirectory(input.scope);
+
+    const updatedMarkdown = withUpdatedTimestamp(input.markdown, input.updatedIso);
+    await writeFile(targetPath, updatedMarkdown, "utf8");
+
+    return {
+      name: fileName.slice(0, -3),
+      fileName,
+      path: targetPath,
+      scope: input.scope,
+      markdown: updatedMarkdown
+    };
+  }
+
+  private async withMutationQueue<T>(key: string, operation: () => Promise<T>): Promise<T> {
+    const previous = NotesStorage.mutationQueues.get(key) ?? Promise.resolve();
+
+    const run = previous.then(operation, operation);
+    const queueTail = run.then(
+      () => undefined,
+      () => undefined
+    );
+
+    NotesStorage.mutationQueues.set(key, queueTail);
+
+    try {
+      return await run;
+    } finally {
+      if (NotesStorage.mutationQueues.get(key) === queueTail) {
+        NotesStorage.mutationQueues.delete(key);
+      }
+    }
   }
 
   private async readFromScope(scope: NotesScope, fileName: string): Promise<StoredNote | null> {
