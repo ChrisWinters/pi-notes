@@ -387,6 +387,32 @@ describe("handleNotesCommand", () => {
     expect(messages.some((message) => message.includes("Missing move destination"))).toBe(true);
   });
 
+  it("renames a note in project scope", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("new release-plan", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("rename release-plan launch-plan", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("show launch-plan", ctx as unknown as ExtensionCommandContext);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Renamed [project] release-plan.md -> launch-plan.md"))).toBe(true);
+    expect(messages.some((message) => message.includes("[project] launch-plan.md"))).toBe(true);
+  });
+
+  it("requires confirmation for rename overwrite", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, false);
+
+    await handleNotesCommand("new alpha", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("new beta", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("rename alpha beta --overwrite", ctx as unknown as ExtensionCommandContext);
+
+    expect(ctx.ui.confirm).toHaveBeenCalledTimes(1);
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Rename cancelled."))).toBe(true);
+  });
+
   it("refuses uninstall when UI is unavailable", async () => {
     const cwd = await createTempCwd();
     const interactiveCtx = createContext(cwd, true, true);

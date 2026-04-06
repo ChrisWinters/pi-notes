@@ -1,6 +1,9 @@
 # Commands
 
-`pi-notes` exposes the `/notes` command family via `pi.registerCommand("notes", ...)`.
+`pi-notes` exposes both:
+
+- `/notes` command family via `pi.registerCommand("notes", ...)`
+- `pi-notes` package CLI (`bin`) for deterministic script/terminal usage
 
 ## Syntax
 
@@ -17,7 +20,20 @@
 - `/notes grep <query> [--project|--global]`
 - `/notes rewrite <name> <instruction> [--project|--global]`
 - `/notes move <name> --to-global|--to-project [--project|--global] [--overwrite]`
+- `/notes rename <from> <to> [--project|--global] [--overwrite]`
 - `/notes uninstall [--project] [--global]`
+
+CLI equivalents:
+
+- `pi-notes ls [--project|--global]`
+- `pi-notes show <name> [--project|--global]`
+- `pi-notes new <name> [--project|--global]`
+- `pi-notes append <name> <text> [--project|--global]`
+- `pi-notes rm <name> [--project|--global] [--yes]`
+- `pi-notes grep <query> [--project|--global]`
+- `pi-notes move <name> --to-global|--to-project [--project|--global] [--overwrite]`
+- `pi-notes rename <from> <to> [--project|--global] [--overwrite]`
+- `pi-notes uninstall [--project] [--global] [--yes]`
 
 ## Examples
 
@@ -27,7 +43,10 @@
 - `/notes append roadmap "add launch checklist"`
 - `/notes show roadmap`
 - `/notes move roadmap --to-global --project`
+- `/notes rename roadmap roadmap-q2 --project`
 - `/notes uninstall --project`
+- `pi-notes show npm --global`
+- `pi-notes rm npm --global --yes`
 
 ## Scope flags
 
@@ -64,13 +83,19 @@ Examples:
 
 ## Non-interactive behavior
 
-If `ctx.hasUI` is false:
+For `/notes` in Pi, if `ctx.hasUI` is false:
 
 - `rm` is blocked with an explicit error
 - `rewrite` is blocked with an explicit error
 - `edit` is blocked with an explicit error
 - `uninstall` is blocked with an explicit error
 - `move --overwrite` confirmation flow is blocked with an explicit error
+
+For `pi-notes` CLI:
+
+- destructive operations (`rm`, `uninstall`) require interactive confirmation unless `--yes` is provided
+- if no interactive TTY and no `--yes`, destructive actions fail safely
+- CLI `edit`/`rewrite` are intentionally not provided; use interactive `/notes` for editor-based flows
 
 ## Command collision note
 

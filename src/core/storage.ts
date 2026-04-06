@@ -73,6 +73,19 @@ export interface MoveNoteResult {
   readonly overwrittenDestination: boolean;
 }
 
+export interface RenameNoteInput {
+  readonly fromName: string;
+  readonly toName: string;
+  readonly selection: ScopeSelection;
+  readonly overwrite: boolean;
+}
+
+export interface RenameNoteResult {
+  readonly source: StoredNote;
+  readonly destination: StoredNote;
+  readonly overwrittenDestination: boolean;
+}
+
 function isNotFound(error: unknown): boolean {
   return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
@@ -340,6 +353,67 @@ export class NotesStorage {
           ...source,
           path: destinationPath,
           scope: input.destinationScope
+        },
+        overwrittenDestination: destinationExists
+      };
+    });
+  }
+
+  public async renameNote(input: RenameNoteInput): Promise<RenameNoteResult> {
+    const sourceFileName = normalizeNoteName(input.fromName);
+    const destinationFileName = normalizeNoteName(input.toName);
+    const mutationKey = `rename:${sourceFileName}->${destinationFileName}`;
+
+    return this.withMutationQueue(mutationKey, async () => {
+      const source = await this.readNote(input.fromName, input.selection);
+      if (source === null) {
+        throw new NotesError(`Note not found: ${input.fromName}`);
+      }
+
+      if (source.fileName === destinationFileName) {
+        throw new NotesError(`Rename target matches current name: ${source.fileName}`);
+      }
+
+      await this.ensureScopeDirectory(source.scope);
+
+      const destinationPath = this.getNotePath(source.scope, destinationFileName);
+      const destinationExists = await this.noteExists(source.scope, destinationFileName);
+
+      if (destinationExists && !input.overwrite) {
+        throw new NotesError(
+          `Destination already has note: ${destinationFileName}. Re-run with --overwrite.`
+        );
+      }
+
+      if (input.overwrite) {
+        await writeFile(destinationPath, source.markdown, "utf8");
+      } else {
+        let handle: FileHandle | undefined;
+        try {
+          handle = await open(destinationPath, "wx");
+          await handle.writeFile(source.markdown, "utf8");
+        } catch (error: unknown) {
+          if (isAlreadyExists(error)) {
+            throw new NotesError(
+              `Destination already has note: ${destinationFileName}. Re-run with --overwrite.`
+            );
+          }
+
+          throw error;
+        } finally {
+          await handle?.close();
+        }
+      }
+
+      await rm(source.path, { force: true });
+
+      return {
+        source,
+        destination: {
+          ...source,
+          name: destinationFileName.slice(0, -3),
+          fileName: destinationFileName,
+          path: destinationPath
         },
         overwrittenDestination: destinationExists
       };

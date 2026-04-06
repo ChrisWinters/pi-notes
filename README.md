@@ -19,6 +19,8 @@ pi install npm:@tribalnerd/pi-notes
 
 ## Commands
 
+Pi extension command family:
+
 - `/notes` (usage/help)
 - `/notes help`
 - `/notes commands`
@@ -32,7 +34,28 @@ pi install npm:@tribalnerd/pi-notes
 - `/notes grep <query> [--project|--global]`
 - `/notes rewrite <name> <instruction> [--project|--global]`
 - `/notes move <name> --to-global|--to-project [--project|--global] [--overwrite]`
+- `/notes rename <from> <to> [--project|--global] [--overwrite]`
 - `/notes uninstall [--project] [--global]`
+
+Package CLI (deterministic non-interactive flows):
+
+CLI invocation options:
+
+- `npx @tribalnerd/pi-notes <command> ...` (works without global install)
+- `pi-notes <command> ...` (requires global npm install/link)
+- `node dist/src/cli.js <command> ...` (repo-local/dev)
+
+Examples:
+
+- `npx @tribalnerd/pi-notes show <name> [--project|--global]`
+- `npx @tribalnerd/pi-notes new <name> [--project|--global]`
+- `npx @tribalnerd/pi-notes append <name> <text> [--project|--global]`
+- `npx @tribalnerd/pi-notes ls [--project|--global]`
+- `npx @tribalnerd/pi-notes grep <query> [--project|--global]`
+- `npx @tribalnerd/pi-notes move <name> --to-global|--to-project [--project|--global] [--overwrite]`
+- `npx @tribalnerd/pi-notes rename <from> <to> [--project|--global] [--overwrite]`
+- `npx @tribalnerd/pi-notes rm <name> [--project|--global] [--yes]`
+- `npx @tribalnerd/pi-notes uninstall [--project] [--global] [--yes]`
 
 ### Scope behavior
 

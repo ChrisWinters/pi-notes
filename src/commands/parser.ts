@@ -39,6 +39,10 @@ function isEdgeFlagForSubcommand(token: string, subcommand: string): boolean {
     return isMoveFlag(token);
   }
 
+  if (subcommand === "rename") {
+    return token === MOVE_FLAG_OVERWRITE;
+  }
+
   return false;
 }
 
@@ -176,9 +180,7 @@ function initialMoveSelection(): MoveSelection {
   };
 }
 
-export function parseNotesCommandInput(input: string): ParsedNotesCommand {
-  const tokens = parseQuotedArgs(input.trim());
-
+function parseNotesCommandTokens(tokens: readonly string[]): ParsedNotesCommand {
   if (tokens.length === 0) {
     return {
       subcommand: undefined,
@@ -224,4 +226,13 @@ export function parseNotesCommandInput(input: string): ParsedNotesCommand {
     scopeSelection: parsedArgs.scopeSelection,
     moveSelection: parsedArgs.moveSelection
   };
+}
+
+export function parseNotesCommandArgv(tokens: readonly string[]): ParsedNotesCommand {
+  return parseNotesCommandTokens(tokens);
+}
+
+export function parseNotesCommandInput(input: string): ParsedNotesCommand {
+  const tokens = parseQuotedArgs(input.trim());
+  return parseNotesCommandTokens(tokens);
 }

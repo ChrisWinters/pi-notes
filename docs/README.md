@@ -7,10 +7,10 @@ This directory contains durable project documentation and execution plans.
 - `docs/plans/active/` — active execution plans
 - `docs/plans/completed/` — completed plans
 
-## Current active plan
+## Current active plans
 
-- _None currently_
+- `docs/plans/active/2026-04-05-pi-notes-agent-skill-bundle/`
 
 ## Latest completed plan
 
-- _None currently_
+- `docs/plans/completed/2026-04-05-pi-notes-cli/`

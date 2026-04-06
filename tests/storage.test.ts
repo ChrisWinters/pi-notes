@@ -242,6 +242,50 @@ describe("NotesStorage", () => {
     });
   });
 
+  it("renames a note within scope", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "old-name", scope: "project" });
+      await storage.appendToNote({
+        name: "old-name",
+        text: "carry content",
+        selection: { forceProject: true, forceGlobal: false },
+        updatedIso: "2026-04-05T20:00:00.000Z"
+      });
+
+      const renamed = await storage.renameNote({
+        fromName: "old-name",
+        toName: "new-name",
+        selection: { forceProject: true, forceGlobal: false },
+        overwrite: false
+      });
+
+      expect(renamed.source.fileName).toBe("old-name.md");
+      expect(renamed.destination.fileName).toBe("new-name.md");
+
+      const oldRead = await storage.readNote("old-name", { forceProject: true, forceGlobal: false });
+      const newRead = await storage.readNote("new-name", { forceProject: true, forceGlobal: false });
+
+      expect(oldRead).toBeNull();
+      expect(newRead?.markdown).toContain("carry content");
+    });
+  });
+
+  it("fails rename when destination exists without overwrite", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "alpha", scope: "project" });
+      await storage.createNote({ name: "beta", scope: "project" });
+
+      await expect(
+        storage.renameNote({
+          fromName: "alpha",
+          toName: "beta",
+          selection: { forceProject: true, forceGlobal: false },
+          overwrite: false
+        })
+      ).rejects.toThrowError("Destination already has note");
+    });
+  });
+
   it("removes a scope directory recursively", async () => {
     await withStorage(async (storage) => {
       await storage.createNote({ name: "cleanup", scope: "project" });

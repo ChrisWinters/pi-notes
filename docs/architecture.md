@@ -6,9 +6,11 @@
 
 - `src/index.ts`
   - registers `/notes` command via `pi.registerCommand`
+- `src/cli.ts`
+  - package CLI entrypoint (`pi-notes ...`) for deterministic script/terminal usage
 - `src/commands/notes.ts`
   - parses command arguments and scope flags
-  - orchestrates command-specific flows (`ls/show/new/append/rm/grep/rewrite`)
+  - orchestrates command-specific flows (`ls/show/new/append/rm/grep/rewrite/move/rename/uninstall`)
 - `src/core/naming.ts`
   - note-name normalization and filename safety validation
 - `src/core/storage.ts`
@@ -25,7 +27,7 @@
 1. `/notes ...` command enters `handleNotesCommand()`
 2. flags/subcommand parsed
 3. storage and naming layers enforce safety and scope rules
-4. result rendered and surfaced via `ctx.ui.notify`
+4. result rendered and surfaced via `ctx.ui.notify` (or CLI stdout/stderr)
 5. confirm-gated operations use `ctx.ui.confirm` (and `ctx.hasUI` checks)
 
 ## Pi alignment
@@ -40,3 +42,4 @@ Key contracts followed:
 - command registration through `pi.registerCommand`
 - non-interactive safeguards using `ctx.hasUI`
 - awareness of command name collision suffixing (`/notes:1` pattern)
+- CLI reuses command parser + handlers to reduce behavior drift between `/notes` and `pi-notes`
