@@ -17,6 +17,14 @@ Notes are stored in markdown and can live at:
 pi install npm:@tribalnerd/pi-notes
 ```
 
+## Bundled agent skill
+
+This package also ships a `pi-notes` skill (`skills/pi-notes/SKILL.md`) for agent-side routing.
+
+- Invokable as `/skill:pi-notes`
+- Guides note intent resolution (global vs project)
+- Uses command-first responses and safe handoff for restricted operations
+
 ## Commands
 
 Pi extension command family:

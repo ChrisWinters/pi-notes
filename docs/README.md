@@ -9,8 +9,8 @@ This directory contains durable project documentation and execution plans.
 
 ## Current active plans
 
-- `docs/plans/active/2026-04-05-pi-notes-agent-skill-bundle/`
+- _None currently_
 
 ## Latest completed plan
 
-- `docs/plans/completed/2026-04-05-pi-notes-cli/`
+- `docs/plans/completed/2026-04-05-pi-notes-agent-skill-bundle/`

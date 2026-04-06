@@ -8,6 +8,8 @@
   - registers `/notes` command via `pi.registerCommand`
 - `src/cli.ts`
   - package CLI entrypoint (`pi-notes ...`) for deterministic script/terminal usage
+- `skills/pi-notes/SKILL.md`
+  - packaged agent skill for intent routing and command-first note handling guidance
 - `src/commands/notes.ts`
   - parses command arguments and scope flags
   - orchestrates command-specific flows (`ls/show/new/append/rm/grep/rewrite/move/rename/uninstall`)

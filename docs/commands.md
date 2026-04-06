@@ -5,6 +5,8 @@
 - `/notes` command family via `pi.registerCommand("notes", ...)`
 - `pi-notes` package CLI (`bin`) for deterministic script/terminal usage
 
+It also bundles a skill at `skills/pi-notes/SKILL.md` (invokable as `/skill:pi-notes`) to guide intent routing and command-first responses.
+
 ## Syntax
 
 - `/notes`
