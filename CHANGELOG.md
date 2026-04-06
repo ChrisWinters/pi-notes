@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-04-06
+
+### Added
+- New standalone CLI entrypoint: `pi-notes <subcommand> ...`
+- Shared CLI command routing that mirrors `/notes` command behavior
+- Bundled `pi-notes` skill for note-intent detection, scope resolution, and command routing guidance
+- Skill/docs references for extension and agent-skill bundling
+
+### Changed
+- README and command docs updated with CLI usage and skill workflows
+- Test coverage updated for CLI and bundled skill behavior
+
 ## [0.1.1] - 2026-04-05
 
 ### Added
