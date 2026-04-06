@@ -25,9 +25,18 @@ The package needs explicit, deterministic routing guidance to reduce ambiguity a
 - Pi users installing `pi-notes` package.
 - Agent operators relying on consistent note-target routing.
 
+## Source references (authoritative for this plan)
+
+- Skill spec source: `docs/plans/active/2026-04-05-pi-notes-agent-skill-bundle/pi-notes/SKILL.md`
+- Pi extensions reference snapshot: `docs/plans/active/2026-04-05-pi-notes-agent-skill-bundle/extensions.md`
+
+Use these files as execution references when implementing and validating this plan.
+
 ## Functional requirements
 
 ### FR1 — Intent detection contract
+
+Implement according to `pi-notes/SKILL.md` intent section.
 
 The skill must recognize note intent from phrases such as:
 
@@ -63,11 +72,18 @@ If the request could target either repo docs or pi-notes, ask a direct disambigu
 
 Skill resources must be discoverable when package is installed through normal Pi package install flow.
 
+Implementation and packaging behavior must remain compatible with extension/packaging guidance documented in `extensions.md`.
+
 ## UX requirements
 
 - Keep prompts concise.
 - Echo resolved scope and path before mutation.
 - Preserve clear user-facing error messages for invalid paths/unsafe inputs.
+
+## Traceability criteria
+
+- Every implemented behavior in this plan should map to a corresponding rule in `pi-notes/SKILL.md`.
+- Any extension packaging/discovery assumptions should cite `extensions.md`.
 
 ## Success criteria
 

@@ -36,6 +36,13 @@ Out of scope:
 - Docs updates explaining how users get/use bundled skill(s).
 - Tests (or validation evidence) for deterministic handling + safety checks.
 
+## Source files (authoritative references)
+
+- Skill behavior source: `pi-notes/SKILL.md`
+- Pi extension/package reference snapshot: `extensions.md`
+
+Use these files when implementing, validating, and documenting this plan.
+
 ## Execution map
 
 - See `prd.md` for product/behavior contract.

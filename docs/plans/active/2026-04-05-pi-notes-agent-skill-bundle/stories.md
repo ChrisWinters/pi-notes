@@ -1,5 +1,10 @@
 # Stories: pi-notes Agent Skill + Extension Bundle
 
+## Story source references
+
+- Skill behavior source: `docs/plans/active/2026-04-05-pi-notes-agent-skill-bundle/pi-notes/SKILL.md`
+- Extension packaging/reference source: `docs/plans/active/2026-04-05-pi-notes-agent-skill-bundle/extensions.md`
+
 ## Story 1 — Update a global note safely
 
 As a user, when I say “update the global npm note,”
@@ -8,6 +13,7 @@ so the right note is updated safely.
 
 ### Acceptance criteria
 
+- Behavior matches intent/scope/mutation rules in `pi-notes/SKILL.md`.
 - Detects note intent.
 - Resolves to global path.
 - Reads existing content first.
@@ -59,3 +65,4 @@ so I do not need manual skill copy steps.
 
 - Package metadata/resource layout includes skill path.
 - Installation docs mention bundled skill behavior.
+- Packaging assumptions and docs are aligned with `extensions.md` guidance.
