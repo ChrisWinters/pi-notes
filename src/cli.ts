@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
+import { realpathSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
+import { fileURLToPath } from "node:url";
 
 import type { NotesCommandContext, NotesNotifyLevel } from "./commands/context.js";
 import { handleNotesCommandArgv } from "./commands/notes.js";
@@ -17,6 +19,18 @@ export interface CliRunOptions {
   readonly interactive?: boolean;
   readonly onStdout?: (message: string) => void;
   readonly onStderr?: (message: string) => void;
+}
+
+export function isDirectCliEntry(moduleUrl: string, argvEntryPath: string | undefined): boolean {
+  if (argvEntryPath === undefined || argvEntryPath.length === 0) {
+    return false;
+  }
+
+  try {
+    return realpathSync(fileURLToPath(moduleUrl)) === realpathSync(argvEntryPath);
+  } catch {
+    return false;
+  }
 }
 
 function parseCliFlags(argv: readonly string[]): CliFlags {
@@ -125,7 +139,7 @@ export async function runCli(argv: readonly string[], options: CliRunOptions = {
   return hadError ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isDirectCliEntry(import.meta.url, process.argv[1])) {
   const code = await runCli(process.argv.slice(2));
   process.exitCode = code;
 }

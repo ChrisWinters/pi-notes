@@ -4,11 +4,11 @@ Execute in order. Mark a ticket done only after its validation evidence is recor
 
 ## tkt-001 — Fix symlink-safe CLI entry detection
 
-- [ ] Inspect `src/cli.ts` direct-execution guard and confirm root cause.
-- [ ] Implement symlink-safe direct-entry detection without changing command grammar.
-- [ ] Add focused regression coverage for symlinked executable detection and import side-effect safety.
-- [ ] Run relevant validation, including at least `npm run test` and active-plan validation.
-- [ ] Update `tkt-001/notes.md` and `tkt-001/evidence.md`.
+- [x] Inspect `src/cli.ts` direct-execution guard and confirm root cause.
+- [x] Implement symlink-safe direct-entry detection without changing command grammar.
+- [x] Add focused regression coverage for symlinked executable detection and import side-effect safety.
+- [x] Run relevant validation, including at least `npm run test` and active-plan validation.
+- [x] Update `tkt-001/notes.md` and `tkt-001/evidence.md`.
 
 ## tkt-002 — Validate built CLI and wrapper behavior
 

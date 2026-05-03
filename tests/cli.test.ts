@@ -1,10 +1,11 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { runCli } from "../src/cli.js";
+import { isDirectCliEntry, runCli } from "../src/cli.js";
 
 const roots: string[] = [];
 const originalHome = process.env["HOME"];
@@ -29,6 +30,21 @@ afterEach(async () => {
 });
 
 describe("pi-notes CLI", () => {
+  it("detects symlinked direct-entry paths", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pi-notes-cli-entry-test-"));
+    roots.push(root);
+    const target = join(root, "cli.js");
+    const link = join(root, "pi-notes");
+
+    await writeFile(target, "#!/usr/bin/env node\n", "utf8");
+    await symlink(target, link);
+
+    expect(isDirectCliEntry(pathToFileURL(target).href, link)).toBe(true);
+    expect(isDirectCliEntry(pathToFileURL(target).href, target)).toBe(true);
+    expect(isDirectCliEntry(pathToFileURL(target).href, undefined)).toBe(false);
+    expect(isDirectCliEntry(pathToFileURL(target).href, resolve(root, "missing"))).toBe(false);
+  });
+
   it("shows usage with help", async () => {
     const cwd = await createTempWorkspace();
     const stdout: string[] = [];
