@@ -12,12 +12,12 @@ Execute in order. Mark a ticket done only after its validation evidence is recor
 
 ## tkt-002 — Validate built CLI and wrapper behavior
 
-- [ ] Run `npm run build` to generate current CLI output.
-- [ ] Verify `node dist/src/cli.js --help` prints usage and exits 0.
-- [ ] Verify symlink/global wrapper behavior with `pi-notes --help` when available, or a documented local symlink equivalent.
-- [ ] Update docs only if the public CLI contract or validation guidance needs clarification.
-- [ ] Run relevant validation, including active-plan validation.
-- [ ] Update `tkt-002/notes.md` and `tkt-002/evidence.md`.
+- [x] Run `npm run build` to generate current CLI output.
+- [x] Verify `node dist/src/cli.js --help` prints usage and exits 0.
+- [x] Verify symlink/global wrapper behavior with `pi-notes --help` when available, or a documented local symlink equivalent.
+- [x] Update docs only if the public CLI contract or validation guidance needs clarification.
+- [x] Run relevant validation, including active-plan validation.
+- [x] Update `tkt-002/notes.md` and `tkt-002/evidence.md`.
 
 ## tkt-003 — Final reconciliation and completion readiness
 
