@@ -1,0 +1,28 @@
+# Tickets: pi-notes shell wrapper no-op
+
+Execute in order. Mark a ticket done only after its validation evidence is recorded and active-plan validation passes.
+
+## tkt-001 — Fix symlink-safe CLI entry detection
+
+- [ ] Inspect `src/cli.ts` direct-execution guard and confirm root cause.
+- [ ] Implement symlink-safe direct-entry detection without changing command grammar.
+- [ ] Add focused regression coverage for symlinked executable detection and import side-effect safety.
+- [ ] Run relevant validation, including at least `npm run test` and active-plan validation.
+- [ ] Update `tkt-001/notes.md` and `tkt-001/evidence.md`.
+
+## tkt-002 — Validate built CLI and wrapper behavior
+
+- [ ] Run `npm run build` to generate current CLI output.
+- [ ] Verify `node dist/src/cli.js --help` prints usage and exits 0.
+- [ ] Verify symlink/global wrapper behavior with `pi-notes --help` when available, or a documented local symlink equivalent.
+- [ ] Update docs only if the public CLI contract or validation guidance needs clarification.
+- [ ] Run relevant validation, including active-plan validation.
+- [ ] Update `tkt-002/notes.md` and `tkt-002/evidence.md`.
+
+## tkt-003 — Final reconciliation and completion readiness
+
+- [ ] Reconcile implementation against `spec.md`, `prd.md`, `stories.md`, and `tickets.md`.
+- [ ] Run full project gates: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`.
+- [ ] Run active-plan validation.
+- [ ] Record any remaining gaps in `tkt-003/gaps.md`; if no gaps remain, say so in notes/evidence.
+- [ ] Update `tkt-003/notes.md` and `tkt-003/evidence.md`.
