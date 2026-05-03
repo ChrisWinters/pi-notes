@@ -21,8 +21,8 @@ Execute in order. Mark a ticket done only after its validation evidence is recor
 
 ## tkt-003 — Final reconciliation and completion readiness
 
-- [ ] Reconcile implementation against `spec.md`, `prd.md`, `stories.md`, and `tickets.md`.
-- [ ] Run full project gates: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`.
-- [ ] Run active-plan validation.
-- [ ] Record any remaining gaps in `tkt-003/gaps.md`; if no gaps remain, say so in notes/evidence.
-- [ ] Update `tkt-003/notes.md` and `tkt-003/evidence.md`.
+- [x] Reconcile implementation against `spec.md`, `prd.md`, `stories.md`, and `tickets.md`.
+- [x] Run full project gates: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`.
+- [x] Run active-plan validation.
+- [x] Record any remaining gaps in `tkt-003/gaps.md`; if no gaps remain, say so in notes/evidence.
+- [x] Update `tkt-003/notes.md` and `tkt-003/evidence.md`.
