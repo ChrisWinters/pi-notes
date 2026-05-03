@@ -1,25 +1,23 @@
 ---
 name: task-planner
-description: Create and manage a plan or spec, prd, stories, and tickets ensuring reliable, iterative execution. Use this skill when asked to plan out changes or create specs for a task, project, or idea.
+description: Create and maintain .pi/tasks plans, specs, PRDs, stories, tickets, and ticket scaffolds; use task-executor for active implementation.
 user-invocable: true
 license: MIT
 metadata:
   tags: plan, spec, prd, stories, tickets
   author: ChrisWinters
-  version: "3.2.0"
+  version: "3.5.0"
 ---
 
 # Task Planner
 
-Execute work through `.pi/tasks/active/<plan-slug>/` plans, keep plan state accurate, validate ticket structure, update agent docs on final reconciliation, and commit each completed ticket slice.
-
-Manage execution through plan files in `.pi/tasks/`.
+Create and maintain `.pi/tasks/active/<plan-slug>/` planning artifacts. Use this skill for planning/specification. Use `task-executor` for ticket-by-ticket implementation and completion.
 
 ## Core model
 
 Humans steer.
-
-Agents execute.
+Agents plan and scaffold.
+Agents execute through `task-executor`.
 
 Assume process/state gaps before prompt gaps:
 
@@ -27,6 +25,21 @@ Assume process/state gaps before prompt gaps:
 - stale ticket state
 - missing validation evidence
 - unclear repository constraints
+
+## Use when
+
+- User asks to plan, spec, design, break down, or ticket work.
+- User asks to create or revise `plan.md`, `spec.md`, `prd.md`, `stories.md`, or `tickets.md`.
+- User asks to scaffold ticket folders.
+- User asks to validate or repair active plan structure before execution.
+
+## Do not use when
+
+- User asks to execute, run, continue, finish, or complete an active plan.
+- User asks to work the next ticket in `.pi/tasks/active/<plan-slug>/`.
+- User asks to reconcile and close a plan after implementation.
+
+For those requests, use `task-executor`.
 
 ## Repository structure
 
@@ -39,7 +52,7 @@ Use these locations:
   - project context, research, references, notes, and idea material
   - not a plan contract source
 - `.pi/tasks/active/<plan-slug>/`
-  - active execution plan
+  - active planning/execution contract
 - `.pi/tasks/completed/<plan-slug>/`
   - completed plan history
 
@@ -49,36 +62,39 @@ Use these locations:
 - Only use project context files when the user explicitly asks you to use specific files.
 - Even then, do not treat those file paths as durable links in other planning artifacts.
 - When creating a new active plan directory, add only the plan slug to `.pi/tasks/tasks.yaml` under `active`.
+- Prefer the lifecycle helper when available: `.pi/skills/task-planner/task-state.sh add <plan-slug>`.
+- After a successful add, refresh the Pi root task index when available: `npm --prefix /home/chris/Pi run tasks:sync`.
 - Keep `.pi/tasks/tasks.yaml` simple; store slugs only, not full paths.
-- Commit new active task plan using the `git-commit` skill.
+- Commit new active task plan or spec scaffolding using the `git-commit` skill.
 
 ## Active plan files
 
-### Pre-spec planning file: `plan.md`
+### Optional pre-spec planning file: `plan.md`
 
-When the user asks to plan (or create a plan) for a new change/update/feature, you may create:
+When the user asks to plan for a new change/update/feature, you may create:
 
 - `.pi/tasks/active/<plan-slug>/plan.md`
 
-`plan.md` is a pre-spec planning workspace used for:
+`plan.md` is a pre-spec planning workspace for:
 
 - early research
 - solution exploration
 - notes and references
 - open questions and assumptions
 
-Rules for `plan.md`:
+Rules:
 
 - When creating `.pi/tasks/active/<plan-slug>/`, add `<plan-slug>` to `.pi/tasks/tasks.yaml` under `active`.
+- Use `.pi/skills/task-planner/task-state.sh add <plan-slug>` when the lifecycle helper exists; otherwise keep `.pi/tasks/tasks.yaml` as a simple active slug list.
 - `plan.md` is only created when the user asks for a plan.
 - `plan.md` is created before `spec.md` when deeper planning is needed.
-- `plan.md` is **not required** to create `spec.md`.
+- `plan.md` is not required to create `spec.md`.
 - If `plan.md` exists, use it as context when creating `spec.md`, `prd.md`, `stories.md`, and `tickets.md`.
 - Other files may exist in `.pi/tasks/active/<plan-slug>/` during planning, and `plan.md` may reference those plan-local files.
 
 ### Required execution files
 
-Every active plan must contain these execution files before implementation starts. When the user asks to spec out tasks or create a spec, create an active spec plan and add `<plan-slug>` to `.pi/tasks/tasks.yaml` under `active`:
+Every active plan must contain these execution files before implementation starts. When the user asks to spec out tasks or create a spec, create an active spec plan and add `<plan-slug>` to `.pi/tasks/tasks.yaml` under `active` with `.pi/skills/task-planner/task-state.sh add <plan-slug>` when available:
 
 - `.pi/tasks/active/<plan-slug>/spec.md`
 - `.pi/tasks/active/<plan-slug>/README.md`
@@ -86,7 +102,7 @@ Every active plan must contain these execution files before implementation start
 - `.pi/tasks/active/<plan-slug>/stories.md`
 - `.pi/tasks/active/<plan-slug>/tickets.md`
 
-### `spec.md` as master execution context
+## `spec.md` as master execution context
 
 `spec.md` is the master execution context for the plan.
 
@@ -98,25 +114,25 @@ It should be context-rich and include:
 - implementation details and approach
 - examples/references needed for execution
 - risks and open questions
+- validation matrix
+- definition of done
 
 `prd.md`, `stories.md`, and `tickets.md` are derived from `spec.md`.
 
-### Detailed spec guidance
+## Detailed spec guidance
 
 When creating or substantially revising `spec.md`, consult these optional support files to strengthen the spec before deriving `prd.md`, `stories.md`, and `tickets.md`:
 
 - `.pi/skills/task-planner/references/detailed-spec-guide.md`
-  - use as a quality guide for stronger specs, including goals/non-goals, contracts, lifecycle/state, safety, observability, failure behavior, validation, and definition of done
 - `.pi/skills/task-planner/references/detailed-spec-template.md`
-  - use as a section template when the work is large, risky, cross-cutting, integration-heavy, or underspecified
 
 Rules:
 
 - Treat these files as guidance, not mandatory structure for every plan.
 - Scale the level of detail to the task size and risk.
 - Prefer source-anchored, testable spec content over generic planning prose.
-- Do not copy unused template sections into `spec.md`; include only sections that improve execution clarity.
-- Ensure tickets derive from the finalized `spec.md` contracts, validation matrix, risks, and definition of done.
+- Do not copy unused template sections into `spec.md`.
+- Ensure tickets derive from finalized spec contracts, validation matrix, risks, and definition of done.
 
 ## Ticket structure
 
@@ -126,34 +142,65 @@ Use a ticket folder per ticket in the plan root:
 
 Each ticket folder should include:
 
-- `notes.md` (implementation notes and decisions)
-- `evidence.md` (validation commands/results)
-- optional `gaps.md` (ticket-local unresolved gaps)
+- `notes.md` — implementation notes and decisions
+- `evidence.md` — validation commands/results
+- optional `gaps.md` — ticket-local unresolved gaps
 - optional supporting files that the tickets reference
 
-See example:
+See:
 
 - `.pi/skills/task-planner/references/example-ticket-structure.md`
 
-## Slice workflow
+## Planning workflow
 
-For each ticket-sized slice:
+When creating a new plan/spec:
 
-1. Read plan/spec files from `.pi/tasks/active/<plan-slug>/`.
-2. Implement the bounded change.
-3. Update ticket docs (`notes.md`, `evidence.md`, optional `gaps.md`).
-4. Update plan-level state files when status changes.
-5. Run plan validation script.
-6. Commit the completed ticket slice using the `git-commit` skill.
-7. Continue to the next ready ticket.
+1. Choose a date-prefixed kebab-case `<plan-slug>`.
+2. Create `.pi/tasks/active/<plan-slug>/`.
+3. Create `spec.md`, `README.md`, `prd.md`, `stories.md`, and `tickets.md`.
+4. Create ticket folders referenced by `tickets.md`.
+5. Add `notes.md` and `evidence.md` to each ticket folder.
+6. Run plan validation.
+7. Add the slug with `.pi/skills/task-planner/task-state.sh add <plan-slug>` when available.
+8. Refresh the Pi root task index when `/home/chris/Pi` is available:
+
+```bash
+npm --prefix /home/chris/Pi run tasks:sync
+```
+
+9. Commit the planning artifacts and local task index updates using `git-commit` skill discipline. If root sync changed `/home/chris/Pi/tasks.yaml` while you are not working in the Pi repo, report that external root-index update instead of silently ignoring it.
+
+## Task state lifecycle helper
+
+When installed, use this helper from the project root to update project-local active task state safely:
+
+```bash
+.pi/skills/task-planner/task-state.sh add <plan-slug>
+.pi/skills/task-planner/task-state.sh complete <plan-slug>
+```
+
+Planning uses `add`. Completion is owned by `task-executor`.
+
+Behavior:
+
+- Updates only the current project's `.pi/tasks/tasks.yaml`.
+- Uses a file lock and atomic rename for read-modify-write operations.
+- Keeps updates idempotent.
+- Validates slugs as path-safe values containing only letters, numbers, dots, underscores, and hyphens.
+- Root `/home/chris/Pi/tasks.yaml` is derived data; refresh it with `tasks-manager` rather than editing it directly.
+- When `/home/chris/Pi` is available, refresh root derived state after local task-state changes:
+
+```bash
+npm --prefix /home/chris/Pi run tasks:sync
+```
 
 ## Validation discipline
 
-Use the task-planner validation script before closing a ticket and before final plan completion.
+Use the task-planner validation script before handing a plan to `task-executor`:
 
-Script:
-
-- `.pi/skills/task-planner/validate-active-plan.sh`
+```bash
+bash .pi/skills/task-planner/validate-active-plan.sh <plan-slug>
+```
 
 What it validates:
 
@@ -166,74 +213,40 @@ Notes:
 
 - `plan.md` is optional and is not required by the validator.
 
-Usage examples:
+## Execution handoff
 
-```bash
-# Validate when exactly one active plan exists
-bash .pi/skills/task-planner/validate-active-plan.sh
+After planning/spec files are complete and validated, tell the user or next agent:
 
-# Validate a specific active plan slug
-bash .pi/skills/task-planner/validate-active-plan.sh 2026-04-18-example-plan
+```txt
+Plan is ready for execution. Use task-executor on .pi/tasks/active/<plan-slug>/.
 ```
+
+Do not perform ticket-by-ticket implementation, final reconciliation, active-to-completed moves, or task-state completion through this skill. Those are `task-executor` responsibilities.
 
 ## Commit discipline
 
 Rules:
 
-- commit after creating a plan file(s)
-- commit after creating spec plan files
-- commit after each completed ticket-sized slice
-- include plan state updates in the same commit
-- do not batch unrelated slices unless explicitly requested
-- use the `git-commit` skill to produce repository-compliant commit subjects
-- do not push unless explicitly asked
+- Commit after creating plan file(s).
+- Commit after creating spec plan files.
+- Include task index updates in the same commit.
+- Use the `git-commit` skill to produce repository-compliant commit subjects.
+- Do not push unless explicitly asked.
 
 ## Blocking and reconciliation
 
-If blocked:
+If planning docs disagree:
 
-- update ticket state immediately
-- record blocker details and evidence
-- do not mark blocked work as complete
+- reconcile plan files before marking the plan ready for execution
+- record open questions in `spec.md` or ticket-local `gaps.md`
+- do not claim the plan is execution-ready until required files validate
 
-If docs/code/plan disagree:
+## Completion boundary
 
-- reconcile plan files before closing the ticket
+`task-planner` does not complete active plans. Completion requires `task-executor`, including:
 
-## Final ticket workflow (required)
-
-The final ticket must perform full reconciliation against:
-
-- `spec.md`
-- `prd.md`
-- `stories.md`
-- `tickets.md`
-
-Then:
-
-1. Use the `agent-docs` skill (aka “agents-docs” in team shorthand).
-2. Update `docs/agent-docs.yaml` with durable outcomes from the completed plan.
-3. Re-run `bash .pi/skills/task-planner/validate-active-plan.sh <plan-slug>`.
-
-If gaps remain:
-
-- document them in `gaps.md`
-- notify the user and propose follow-up tickets
-
-## Completion rule
-
-When a plan is complete:
-
-1. Confirm all tickets are done and validated.
-2. Move the plan directory from:
-   - `.pi/tasks/active/<plan-slug>/`
-   to
-   - `.pi/tasks/completed/<plan-slug>/`
-3. Remove `<plan-slug>` from `.pi/tasks/tasks.yaml` `active`.
-4. Commit the move and final updates using the `git-commit` skill.
-
-Stop only when:
-
-- plan is completed and moved
-- remaining work is explicitly blocked
-- user redirects priorities
+- final implementation reconciliation
+- `agent-docs` update when durable context changed
+- move from `.pi/tasks/active/<plan-slug>/` to `.pi/tasks/completed/<plan-slug>/`
+- `.pi/skills/task-planner/task-state.sh complete <plan-slug>`
+- final commit

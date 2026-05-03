@@ -1,0 +1,98 @@
+project:
+  name: "example-project"
+  type: "cli-sdk"
+  stack:
+    - "TypeScript"
+    - "Node.js"
+  refs:
+    - "package.json"
+
+entrypoints:
+  cli:
+    refs:
+      - "src/cli.ts"
+  api_exports:
+    refs:
+      - "src/index.ts"
+
+architecture:
+  modules:
+    - name: "core"
+      intent: "runtime orchestration"
+      refs:
+        - "src/core"
+    - name: "policy"
+      intent: "global/team/agent gating"
+      refs:
+        - "src/policy"
+    - name: "integration"
+      intent: "transport/protocol mapping"
+      refs:
+        - "src/integration"
+
+runtime_flows:
+  team_lifecycle:
+    steps:
+      - "create"
+      - "spawn"
+      - "status"
+      - "shutdown"
+    refs:
+      - "src/core/contracts.ts"
+      - "src/core/in-memory-swarm-engine.ts"
+
+contracts:
+  primary:
+    - name: "runtime contracts"
+      refs:
+        - "src/core/contracts.ts"
+    - name: "policy contracts"
+      refs:
+        - "src/policy/contracts.ts"
+
+state:
+  persistence:
+    mode: "file-backed"
+    refs:
+      - "src/state"
+
+integrations:
+  providers:
+    refs:
+      - "src/providers"
+  communication:
+    refs:
+      - "src/communication"
+
+validation:
+  required_commands:
+    - "pnpm lint"
+    - "pnpm typecheck"
+    - "pnpm test"
+  focused_tests:
+    refs:
+      - "tests/core-runtime-engine.test.ts"
+      - "tests/cli.test.ts"
+
+operations:
+  release_gate:
+    command: "pnpm release:check"
+    refs:
+      - "package.json"
+
+constraints:
+  non_negotiable:
+    - "interface-first changes"
+    - "deterministic error behavior"
+    - "no silent policy bypass"
+  refs:
+    - "src/core/contracts.ts"
+    - "src/policy/runtime-gate.ts"
+
+glossary:
+  swarm_engine: "runtime coordinator"
+  policy_gate: "effective allow/deny resolver"
+
+open_questions:
+  - "Which modules are stable public API vs internal-only?"
+  - "Which runtime flows require backward-compatibility guarantees?"
