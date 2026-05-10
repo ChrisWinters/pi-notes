@@ -6,7 +6,7 @@ license: MIT
 metadata:
   tags: plan, spec, prd, stories, tickets
   author: ChrisWinters
-  version: "3.5.0"
+  version: "3.6.0"
 ---
 
 # Task Planner
@@ -30,6 +30,7 @@ Assume process/state gaps before prompt gaps:
 
 - User asks to plan, spec, design, break down, or ticket work.
 - User asks to create or revise `plan.md`, `spec.md`, `prd.md`, `stories.md`, or `tickets.md`.
+- User asks for a "plan only", "planning only", "outline only", or otherwise explicitly limits output to planning.
 - User asks to scaffold ticket folders.
 - User asks to validate or repair active plan structure before execution.
 
@@ -69,11 +70,28 @@ Use these locations:
 
 ## Active plan files
 
-### Optional pre-spec planning file: `plan.md`
+### Plan-only mode: `plan.md`
 
-When the user asks to plan for a new change/update/feature, you may create:
+When the user asks for a "plan only", "planning only", "outline only", or otherwise explicitly limits output to planning, obey that boundary strictly.
+
+Create only:
 
 - `.pi/tasks/active/<plan-slug>/plan.md`
+
+Do not create these files unless the user later asks to promote the plan into a spec or execution plan:
+
+- `spec.md`
+- `README.md`
+- `prd.md`
+- `stories.md`
+- `tickets.md`
+- ticket folders such as `tkt-001/`
+
+In plan-only mode:
+
+- Do not run active-plan validation, because `plan.md` alone is intentionally not execution-ready.
+- Do not say the plan is ready for execution.
+- End by saying the plan-only artifact is ready for review and can be promoted to a full spec/ticket plan on request.
 
 `plan.md` is a pre-spec planning workspace for:
 
@@ -87,6 +105,7 @@ Rules:
 - When creating `.pi/tasks/active/<plan-slug>/`, add `<plan-slug>` to `.pi/tasks/tasks.yaml` under `active`.
 - Use `.pi/skills/task-planner/task-state.sh add <plan-slug>` when the lifecycle helper exists; otherwise keep `.pi/tasks/tasks.yaml` as a simple active slug list.
 - `plan.md` is only created when the user asks for a plan.
+- If the user says "plan only" or equivalent, stop after `plan.md` and task-state/index updates.
 - `plan.md` is created before `spec.md` when deeper planning is needed.
 - `plan.md` is not required to create `spec.md`.
 - If `plan.md` exists, use it as context when creating `spec.md`, `prd.md`, `stories.md`, and `tickets.md`.
@@ -151,9 +170,28 @@ See:
 
 - `.pi/skills/task-planner/references/example-ticket-structure.md`
 
-## Planning workflow
+## Planning workflows
 
-When creating a new plan/spec:
+### Plan-only workflow
+
+When creating a plan-only artifact:
+
+1. Choose a date-prefixed kebab-case `<plan-slug>`.
+2. Create `.pi/tasks/active/<plan-slug>/`.
+3. Create only `plan.md`.
+4. Add the slug with `.pi/skills/task-planner/task-state.sh add <plan-slug>` when available.
+5. Refresh the Pi root task index when `/home/chris/Pi` is available:
+
+```bash
+npm --prefix /home/chris/Pi run tasks:sync
+```
+
+6. Commit `plan.md` and task index updates using `git-commit` skill discipline.
+7. Report that the plan-only artifact is ready for review, not execution.
+
+### Spec/execution-plan workflow
+
+When creating a new spec or execution-ready plan:
 
 1. Choose a date-prefixed kebab-case `<plan-slug>`.
 2. Create `.pi/tasks/active/<plan-slug>/`.
