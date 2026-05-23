@@ -50,7 +50,7 @@ npm run typecheck
 npm run test
 ```
 
-## tkt-003 — Skill update and final validation
+## tkt-003 — Skill update and final validation (done)
 
 Goal: update agent-facing guidance and prove the package remains valid.
 

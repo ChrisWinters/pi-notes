@@ -1,25 +1,35 @@
 ---
 name: pi-notes
-description: Route note-related requests to pi-notes CLI flows. Detect note intent, resolve global/project scope, use CLI commands for speed, and hand off restricted commands to the user.
+description: Route note-related requests through pi-notes tools first, resolving project/global scope safely and handing destructive commands back to the user.
 ---
 
 # pi-notes
 
-Use this skill when the user asks to view, create, update, rename, move, or delete notes.
+Use this skill when the user asks to view, create, update, search, rename, move, set up, or delete notes.
 
-## Core rule: prefer CLI for speed + low token usage
+## Core rule: prefer pi-notes tools
 
-Default to CLI-style note operations instead of manual file-by-file reasoning.
+When available, use registered `notes_*` tools instead of shelling out to the CLI or manually editing note files.
 
-Preferred command shape in Pi chat:
+Tool-first mapping:
 
-- `/notes <subcommand> ...`
+- `notes_setup` — set up or initialize pi-notes storage.
+- `notes_list` — list/browse notes.
+- `notes_show` — show/read/open a note by name.
+- `notes_new` — create a new note by name.
+- `notes_append` — append text to an existing note.
+- `notes_grep` — search notes by query.
+- `notes_rename` — rename a note.
+- `notes_move` — move a note between project and global scopes.
 
-When executing locally in repo/dev contexts, use available CLI entrypoints (in this order):
+Fallback only when tools are unavailable:
 
-1. `pi-notes <subcommand> ...`
-2. `npx @tribalnerd/pi-notes <subcommand> ...`
-3. `node dist/src/cli.js <subcommand> ...`
+1. Pi chat command: `/notes <subcommand> ...`
+2. Local CLI: `pi-notes <subcommand> ...`
+3. Package CLI: `npx @tribalnerd/pi-notes <subcommand> ...`
+4. Repo/dev CLI: `node dist/src/cli.js <subcommand> ...`
+
+Never manually read or mutate note files when a tool or command can do the operation.
 
 ## Intent detection patterns
 
@@ -30,71 +40,82 @@ Treat as pi-notes intent when user says things like:
 - `show note`, `read note`, `open note`
 - `update/edit/append/rewrite note`
 - `new/create/move/rename/rm/delete note`
+- `setup notes`, `initialize notes`
 - explicit note path like `~/.pi/notes/<name>.md`
 
 ## Scope resolution rules
 
-- `--global` or “global note” => global note scope (`~/.pi/notes/*.md`)
-- `--project` or “project note” => project note scope (repo-local notes)
-- both flags => ask user to choose one
-- missing scope for mutation => ask clarification first
+Tool scope values:
 
-## Command routing policy
+- `project` => project notes under `.pi/notes/`
+- `global` => global notes under `~/.pi/notes/`
+- `default` or omitted => command default behavior
 
-### Commands the agent can execute
+Rules:
 
-- `new`, `append`, `rename`, `move`, `grep`, `ls`
+- `--global` or “global note” => use `scope: global`.
+- `--project` or “project note” => use `scope: project`.
+- both flags/scopes => ask user to choose one.
+- missing scope for mutation (`notes_new`, `notes_append`, `notes_rename`, `notes_move`) => ask one concise clarification question unless the user clearly accepts default behavior.
+- missing scope for read/search/list can use default behavior unless user asks for a specific scope.
 
-Use CLI directly for these to reduce latency and token cost.
+## Prompt-to-tool examples
 
-### Commands the agent should NOT execute directly
+- “list project notes” -> `notes_list` with `scope: project`
+- “show global npm note” -> `notes_show` with `name: npm`, `scope: global`
+- “create a project note named daily” -> `notes_new` with `name: daily`, `scope: project`
+- “append shipped release to daily” -> clarify scope if needed, then `notes_append`
+- “search notes for release” -> `notes_grep` with `query: release`
+- “rename project note foo to bar” -> `notes_rename` with `fromName: foo`, `toName: bar`, `scope: project`
+- “move note foo to global” -> `notes_move` with `name: foo`, `destination: global`
+- “set up notes” -> `notes_setup`
 
-- `show`
-- `rm`
-- `uninstall`
+## Commands the agent should NOT execute as tools
 
-For these, reply with the exact command the user should run in Pi chat.
+There are no destructive note tools in the first tool surface.
+
+For destructive requests, reply with the exact command the user should run in Pi chat:
+
+- Delete/remove note: `/notes rm <name> [--project|--global]`
+- Uninstall notes: `/notes uninstall [--project] [--global]`
 
 Examples:
 
-- Show global npm note: `/notes show npm --global`
-- Remove global npm note: `/notes rm npm --global`
-- Uninstall project notes: `/notes uninstall --project`
+- Remove global npm note: `Use: /notes rm npm --global`
+- Uninstall project notes: `Use: /notes uninstall --project`
 
-## Mandatory response for global show requests
-
-If user asks to show a global note (example: “show me the global npm note”), respond with:
-
-- `Use: /notes show npm --global`
-
-Do not attempt to print global note contents.
+Do not silently delete or uninstall notes.
 
 ## Safe mutation flow
 
 For note updates/mutations:
 
-1. Resolve note + scope.
+1. Resolve note name and scope.
 2. If ambiguous, ask one concise question.
-3. Use CLI command.
-4. Report command + outcome briefly.
+3. Use the matching `notes_*` tool.
+4. Report the outcome briefly.
 
-Never do silent destructive actions.
+For overwrite-capable operations (`notes_rename`, `notes_move`):
+
+- Use `overwrite: true` only when the user explicitly asked to overwrite or confirmed it.
+- Otherwise leave overwrite omitted/false and let the tool report conflicts.
 
 ## Fallback clarification prompts
 
 - “Should I use global or project scope?”
 - “Which note name should I target?”
+- “What text should I append?”
 - “Do you want a pi-note update or a repo file update?”
 
-## Command forms (must be correct)
+## Command forms when falling back
 
 - Pi chat slash command: `/notes ...`
-- Package CLI command (terminal): `pi-notes ...` (if installed) or `node dist/src/cli.js ...` in repo/dev
+- Package CLI command: `pi-notes ...` or `node dist/src/cli.js ...` in repo/dev
 
 Never suggest `/pi-notes ...` as a slash command.
 
 ## Response style
 
 - concise, operational
-- include exact command when handing back to user
-- prefer command-first answers over long prose
+- include exact command when handing destructive actions back to the user
+- prefer tool outcomes over long prose

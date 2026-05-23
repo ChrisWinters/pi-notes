@@ -15,12 +15,14 @@ describe("package resource manifest", () => {
     expect(packageJson.files).toContain("skills");
   });
 
-  it("ships pi-notes skill with command routing guidance", async () => {
+  it("ships pi-notes skill with tool-first routing guidance", async () => {
     const skillPath = join(process.cwd(), "skills", "pi-notes", "SKILL.md");
     const skill = await readFile(skillPath, "utf8");
 
     expect(skill).toContain("name: pi-notes");
-    expect(skill).toContain("Use: /notes show npm --global");
+    expect(skill).toContain("use registered `notes_*` tools");
+    expect(skill).toContain("`notes_show` with `name: npm`, `scope: global`");
+    expect(skill).toContain("Use: /notes rm npm --global");
     expect(skill).toContain("Never suggest `/pi-notes ...` as a slash command.");
   });
 });
