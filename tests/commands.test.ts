@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 
 import { handleNotesCommand } from "../src/commands/notes.js";
+import { NOTES_USAGE } from "../src/commands/shared.js";
 
 interface TestUi {
   readonly notify: ReturnType<typeof vi.fn>;
@@ -98,6 +99,29 @@ describe("handleNotesCommand", () => {
     const notifyCalls = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
     expect(notifyCalls.some((message) => message.includes("Updated [project] daily.md"))).toBe(true);
     expect(notifyCalls.some((message) => message.includes("[project] daily.md"))).toBe(true);
+  });
+
+  it("supports hidden add and list aliases", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("add alias-note --project", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("list --project", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("show alias-note --project", ctx as unknown as ExtensionCommandContext);
+
+    const notifyCalls = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(notifyCalls.some((message) => message.includes("Created [project] alias-note.md"))).toBe(true);
+    expect(notifyCalls.some((message) => message.includes("[project] alias-note.md"))).toBe(true);
+    expect(notifyCalls.some((message) => message.includes("## alias-note"))).toBe(true);
+  });
+
+  it("keeps hidden aliases out of usage and README command lists", async () => {
+    const readme = await readFile(join(process.cwd(), "README.md"), "utf8");
+
+    expect(NOTES_USAGE).not.toContain("/notes add");
+    expect(NOTES_USAGE).not.toContain("/notes list");
+    expect(readme).not.toContain("/notes add");
+    expect(readme).not.toContain("/notes list");
   });
 
   it("preserves literal scope-like tokens inside append content", async () => {

@@ -25,7 +25,7 @@ npm run typecheck
 npm run test
 ```
 
-## tkt-002 — Add hidden add/list aliases
+## tkt-002 — Add hidden add/list aliases (done)
 
 Goal: add undocumented `add` and `list` shortcuts without expanding public help/docs.
 
