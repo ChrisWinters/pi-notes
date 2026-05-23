@@ -39,4 +39,17 @@ describe("package resource manifest", () => {
     expect(skill).toContain("Use: /notes rm npm --global");
     expect(skill).toContain("Never suggest `/pi-notes ...` as a slash command.");
   });
+
+  it("documents tool-first behavior without exposing hidden aliases", async () => {
+    const readme = await readFile(join(process.cwd(), "README.md"), "utf8");
+    const commands = await readFile(join(process.cwd(), "docs", "commands.md"), "utf8");
+    const architecture = await readFile(join(process.cwd(), "docs", "architecture.md"), "utf8");
+    const docs = `${readme}\n${commands}\n${architecture}`;
+
+    expect(docs).toContain("notes_*");
+    expect(docs).toContain("pi.registerTool");
+    expect(docs).toContain("tool-first");
+    expect(docs).not.toContain("/notes add");
+    expect(docs).not.toContain("/notes list");
+  });
 });

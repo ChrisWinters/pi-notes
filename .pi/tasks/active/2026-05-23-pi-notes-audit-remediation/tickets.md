@@ -43,7 +43,7 @@
 - Multi-file mutations acquire queues in deterministic order.
 - Concurrency tests pass consistently.
 
-## tkt-004: Update docs for tool-first extension behavior
+## [x] tkt-004: Update docs for tool-first extension behavior
 
 ### Scope
 

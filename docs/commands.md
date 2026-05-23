@@ -1,11 +1,12 @@
 # Commands
 
-`pi-notes` exposes both:
+`pi-notes` exposes three surfaces:
 
 - `/notes` command family via `pi.registerCommand("notes", ...)`
+- agent-facing `notes_*` tools via `pi.registerTool(...)`
 - `pi-notes` package CLI (`bin`) for deterministic script/terminal usage
 
-It also bundles a skill at `skills/pi-notes/SKILL.md` (invokable as `/skill:pi-notes`) to guide intent routing and command-first responses.
+It also bundles a skill at `skills/pi-notes/SKILL.md` (invokable as `/skill:pi-notes`) to guide intent routing. The skill prefers registered `notes_*` tools when available, then falls back to `/notes` or the CLI for restricted or unavailable tool flows.
 
 ## Syntax
 
@@ -24,6 +25,19 @@ It also bundles a skill at `skills/pi-notes/SKILL.md` (invokable as `/skill:pi-n
 - `/notes move <name> --to-global|--to-project [--project|--global] [--overwrite]`
 - `/notes rename <from> <to> [--project|--global] [--overwrite]`
 - `/notes uninstall [--project] [--global]`
+
+Agent tool equivalents:
+
+- `notes_setup`
+- `notes_list`
+- `notes_show`
+- `notes_new`
+- `notes_append`
+- `notes_grep`
+- `notes_rename`
+- `notes_move`
+
+No destructive/editor tools are registered; `rm`, `uninstall`, `edit`, and `rewrite` remain explicit command/CLI handoffs.
 
 CLI equivalents:
 
@@ -102,4 +116,4 @@ For `pi-notes` CLI:
 ## Command collision note
 
 Pi may suffix duplicate command names when multiple extensions register the same command, for example `/notes:1`.
-See upstream Pi extensions docs: https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/extensions.md
+See upstream Pi extensions docs: https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/docs/extensions.md

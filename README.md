@@ -1,10 +1,10 @@
 # pi-notes
 
-A human-first notes extension for [Pi](https://github.com/badlogic/pi-mono), built to keep quick notes organized, searchable, and safe directly inside your Pi workflow.
+A human-first notes extension for [Pi](https://github.com/earendil-works/pi-mono), built to keep quick notes organized, searchable, and safe directly inside your Pi workflow.
 
 ## Summary
 
-[pi-notes](https://github.com/ChrisWinters/pi-notes) adds a `/notes` command family to Pi so you can create, read, update, search, and safely remove notes without leaving your terminal flow.
+[pi-notes](https://github.com/ChrisWinters/pi-notes) adds a `/notes` command family plus agent-facing `notes_*` tools to Pi so you can create, read, update, search, and safely remove notes without leaving your terminal flow.
 
 Notes are stored in markdown and can live at:
 
@@ -23,7 +23,9 @@ This package also ships a `pi-notes` skill (`skills/pi-notes/SKILL.md`) for agen
 
 - Invokable as `/skill:pi-notes`
 - Guides note intent resolution (global vs project)
-- Uses command-first responses and safe handoff for restricted operations
+- Prefers registered `notes_*` tools when available
+- Falls back to `/notes` or the package CLI for restricted or unavailable tool flows
+- Uses safe handoff for restricted/destructive operations
 
 ## Commands
 
@@ -44,6 +46,19 @@ Pi extension command family:
 - `/notes move <name> --to-global|--to-project [--project|--global] [--overwrite]`
 - `/notes rename <from> <to> [--project|--global] [--overwrite]`
 - `/notes uninstall [--project] [--global]`
+
+Agent-facing tools registered by the extension:
+
+- `notes_setup`
+- `notes_list`
+- `notes_show`
+- `notes_new`
+- `notes_append`
+- `notes_grep`
+- `notes_rename`
+- `notes_move`
+
+Destructive/editor flows intentionally remain command/CLI handoffs instead of agent tools.
 
 Package CLI (deterministic non-interactive flows):
 
