@@ -1,14 +1,8 @@
 {
   "version": 1,
-  "active": [
-    {
-      "slug": "2026-05-23-note-template-and-shortcuts",
-      "state": "built",
-      "manager": "agent",
-      "createdOrder": 1
-    }
-  ],
+  "active": [],
   "completed": [
+    "2026-05-23-note-template-and-shortcuts",
     "2026-05-23-pi-notes-agent-tools"
   ]
 }
