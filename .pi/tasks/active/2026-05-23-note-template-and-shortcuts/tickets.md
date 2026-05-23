@@ -50,7 +50,7 @@ npm run typecheck
 npm run test
 ```
 
-## tkt-003 — Final validation and evidence
+## tkt-003 — Final validation and evidence (done)
 
 Goal: reconcile ticket evidence and run full project validation.
 
