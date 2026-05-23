@@ -313,7 +313,7 @@ describe("handleNotesCommand", () => {
     expect(await pathExists(starterPath)).toBe(true);
 
     const starter = await readFile(starterPath, "utf8");
-    expect(starter).toContain("# Welcome to notes");
+    expect(starter).toContain("---\n\n## Welcome to notes\n\nUse /notes new <name> to create notes.");
 
     const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
     expect(messages.some((message) => message.includes("Run /notes show note --global"))).toBe(true);

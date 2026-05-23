@@ -100,7 +100,7 @@ export function createEmptyNoteMarkdown(title: string, updatedIso: string): stri
       title,
       updated: updatedIso
     },
-    `# ${title}\n`
+    `\n## ${title}\n`
   );
 }
 

@@ -1,6 +1,6 @@
 # Tickets: note template and hidden shortcuts
 
-## tkt-001 — Update generated note templates
+## tkt-001 — Update generated note templates (done)
 
 Goal: make default generated note content use h2 headings with spacing.
 
