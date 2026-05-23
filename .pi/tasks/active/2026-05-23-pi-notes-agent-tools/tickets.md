@@ -1,6 +1,6 @@
 # Tickets: pi-notes agent tools
 
-## tkt-001 — Tool adapter, schemas, and exported names
+## tkt-001 — Tool adapter, schemas, and exported names (done)
 
 Goal: create the shared infrastructure for pi-notes tools.
 
@@ -25,7 +25,7 @@ npm run typecheck
 npm run test
 ```
 
-## tkt-002 — Register tools and execution tests
+## tkt-002 — Register tools and execution tests (done)
 
 Goal: register the safe `notes_*` tools and prove representative behavior.
 
