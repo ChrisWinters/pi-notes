@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 
 import { handleNotesCommand } from "../src/commands/notes.js";
 import { NOTES_USAGE } from "../src/commands/shared.js";

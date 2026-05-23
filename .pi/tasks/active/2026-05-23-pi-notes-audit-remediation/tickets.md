@@ -1,6 +1,6 @@
 # Tickets: pi-notes audit remediation
 
-## tkt-001: Align Pi package imports and dependency metadata
+## [x] tkt-001: Align Pi package imports and dependency metadata
 
 ### Scope
 

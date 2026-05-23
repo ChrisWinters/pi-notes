@@ -4,15 +4,29 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("package resource manifest", () => {
-  it("declares skills path in package.json pi manifest", async () => {
+  it("declares package resources and current Pi peer imports", async () => {
     const packagePath = join(process.cwd(), "package.json");
     const packageJson = JSON.parse(await readFile(packagePath, "utf8")) as {
-      pi?: { skills?: string[] };
+      pi?: { extensions?: string[]; skills?: string[] };
       files?: string[];
+      peerDependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
     };
 
+    expect(packageJson.pi?.extensions).toContain("./src/index.ts");
     expect(packageJson.pi?.skills).toContain("./skills");
     expect(packageJson.files).toContain("skills");
+    expect(packageJson.peerDependencies).toHaveProperty("@earendil-works/pi-coding-agent", "*");
+    expect(packageJson.peerDependencies).not.toHaveProperty("@mariozechner/pi-coding-agent");
+    expect(packageJson.devDependencies).toHaveProperty("typebox");
+    expect(packageJson.devDependencies).not.toHaveProperty("@sinclair/typebox");
+  });
+
+  it("loads the source extension entry with runtime imports", async () => {
+    const extension = await import("../src/index.js");
+
+    expect(extension.default).toEqual(expect.any(Function));
+    expect(extension.getNotesSetupToolName()).toBe("notes_setup");
   });
 
   it("ships pi-notes skill with tool-first routing guidance", async () => {

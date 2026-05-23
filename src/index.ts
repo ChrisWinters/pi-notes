@@ -1,5 +1,5 @@
-import type { AgentToolResult, ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { Type, type Static, type TSchema, type TUnsafe } from "@sinclair/typebox";
+import type { AgentToolResult, ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { Type, type Static, type TSchema, type TUnsafe } from "typebox";
 
 import type { NotesNotifyLevel } from "./commands/context.js";
 import { handleNotesCommand, handleNotesCommandArgv } from "./commands/notes.js";
