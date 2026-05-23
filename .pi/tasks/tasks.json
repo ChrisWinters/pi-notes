@@ -6,6 +6,12 @@
       "state": "brainstorm",
       "manager": "human",
       "createdOrder": 1
+    },
+    {
+      "slug": "2026-05-23-pi-notes-agent-tools",
+      "state": "brainstorm",
+      "manager": "human",
+      "createdOrder": 2
     }
   ],
   "completed": []
