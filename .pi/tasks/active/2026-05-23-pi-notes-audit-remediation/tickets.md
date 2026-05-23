@@ -29,7 +29,7 @@
 - Large tool output is truncated with a visible marker.
 - Slash command behavior remains user-friendly.
 
-## tkt-003: Serialize same-note mutations consistently
+## [x] tkt-003: Serialize same-note mutations consistently
 
 ### Scope
 

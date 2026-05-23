@@ -195,33 +195,35 @@ export class NotesStorage {
     const fileName = normalizeNoteName(input.name);
     const targetPath = this.getNotePath(input.scope, fileName);
 
-    await this.ensureScopeDirectory(input.scope);
+    return this.withMutationQueue(targetPath, async () => {
+      await this.ensureScopeDirectory(input.scope);
 
-    const nowIso = new Date().toISOString();
-    const title = input.title?.trim().length ? input.title : input.name.trim();
-    const markdown = createEmptyNoteMarkdown(title, nowIso);
+      const nowIso = new Date().toISOString();
+      const title = input.title?.trim().length ? input.title : input.name.trim();
+      const markdown = createEmptyNoteMarkdown(title, nowIso);
 
-    let handle: FileHandle | undefined;
-    try {
-      handle = await open(targetPath, "wx");
-      await handle.writeFile(markdown, "utf8");
-    } catch (error: unknown) {
-      if (isAlreadyExists(error)) {
-        throw new NotesError(`Note already exists: ${fileName}`);
+      let handle: FileHandle | undefined;
+      try {
+        handle = await open(targetPath, "wx");
+        await handle.writeFile(markdown, "utf8");
+      } catch (error: unknown) {
+        if (isAlreadyExists(error)) {
+          throw new NotesError(`Note already exists: ${fileName}`);
+        }
+
+        throw error;
+      } finally {
+        await handle?.close();
       }
 
-      throw error;
-    } finally {
-      await handle?.close();
-    }
-
-    return {
-      name: fileName.slice(0, -3),
-      fileName,
-      path: targetPath,
-      scope: input.scope,
-      markdown
-    };
+      return {
+        name: fileName.slice(0, -3),
+        fileName,
+        path: targetPath,
+        scope: input.scope,
+        markdown
+      };
+    });
   }
 
   public async readNoteByFileName(fileName: string, selection: ScopeSelection): Promise<StoredNote | null> {
@@ -247,18 +249,21 @@ export class NotesStorage {
 
   public async writeNote(input: WriteNoteInput): Promise<StoredNote> {
     const fileName = normalizeNoteName(input.name);
-    const mutationKey = `${input.scope}:${fileName}`;
+    const targetPath = this.getNotePath(input.scope, fileName);
 
-    return this.withMutationQueue(mutationKey, async () => {
+    return this.withMutationQueue(targetPath, async () => {
       return this.writeNoteInternal(input);
     });
   }
 
   public async appendToNote(input: AppendNoteInput): Promise<StoredNote> {
-    const fileName = normalizeNoteName(input.name);
-    const mutationKey = `append:${fileName}`;
+    const initial = await this.readNote(input.name, input.selection);
 
-    return this.withMutationQueue(mutationKey, async () => {
+    if (initial === null) {
+      throw new NotesError(`Cannot append. Note not found: ${input.name}`);
+    }
+
+    return this.withMutationQueue(initial.path, async () => {
       const existing = await this.readNote(input.name, input.selection);
 
       if (existing === null) {
@@ -278,14 +283,22 @@ export class NotesStorage {
   }
 
   public async deleteNote(name: string, selection: ScopeSelection): Promise<boolean> {
-    const existing = await this.readNote(name, selection);
+    const initial = await this.readNote(name, selection);
 
-    if (existing === null) {
+    if (initial === null) {
       return false;
     }
 
-    await rm(existing.path);
-    return true;
+    return this.withMutationQueue(initial.path, async () => {
+      const existing = await this.readNote(name, selection);
+
+      if (existing === null) {
+        return false;
+      }
+
+      await rm(existing.path);
+      return true;
+    });
   }
 
   public async removeScopeDirectory(scope: NotesScope): Promise<{ path: string; removed: boolean }> {
@@ -306,10 +319,14 @@ export class NotesStorage {
   }
 
   public async moveNote(input: MoveNoteInput): Promise<MoveNoteResult> {
-    const fileName = normalizeNoteName(input.name);
-    const mutationKey = `move:${fileName}`;
+    const initial = await this.readNote(input.name, input.selection);
+    if (initial === null) {
+      throw new NotesError(`Note not found: ${input.name}`);
+    }
 
-    return this.withMutationQueue(mutationKey, async () => {
+    const initialDestinationPath = this.getNotePath(input.destinationScope, initial.fileName);
+
+    return this.withMutationQueues([initial.path, initialDestinationPath], async () => {
       const source = await this.readNote(input.name, input.selection);
       if (source === null) {
         throw new NotesError(`Note not found: ${input.name}`);
@@ -360,11 +377,15 @@ export class NotesStorage {
   }
 
   public async renameNote(input: RenameNoteInput): Promise<RenameNoteResult> {
-    const sourceFileName = normalizeNoteName(input.fromName);
     const destinationFileName = normalizeNoteName(input.toName);
-    const mutationKey = `rename:${sourceFileName}->${destinationFileName}`;
+    const initial = await this.readNote(input.fromName, input.selection);
+    if (initial === null) {
+      throw new NotesError(`Note not found: ${input.fromName}`);
+    }
 
-    return this.withMutationQueue(mutationKey, async () => {
+    const initialDestinationPath = this.getNotePath(initial.scope, destinationFileName);
+
+    return this.withMutationQueues([initial.path, initialDestinationPath], async () => {
       const source = await this.readNote(input.fromName, input.selection);
       if (source === null) {
         throw new NotesError(`Note not found: ${input.fromName}`);
@@ -493,6 +514,17 @@ export class NotesStorage {
         NotesStorage.mutationQueues.delete(key);
       }
     }
+  }
+
+  private async withMutationQueues<T>(keys: readonly string[], operation: () => Promise<T>): Promise<T> {
+    const uniqueKeys = [...new Set(keys)].sort();
+
+    return uniqueKeys.reduceRight(
+      (nextOperation, key) => {
+        return () => this.withMutationQueue(key, nextOperation);
+      },
+      operation
+    )();
   }
 
   private async readFromScope(scope: NotesScope, fileName: string): Promise<StoredNote | null> {
