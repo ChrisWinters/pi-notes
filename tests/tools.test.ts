@@ -201,19 +201,40 @@ describe("pi-notes tools", () => {
     expect(shown.text).toContain("# source");
   });
 
-  it("runs setup and reports handler errors", async () => {
+  it("runs setup and throws handler errors", async () => {
     const cwd = await createTempCwd();
     const { api, tools } = createExtensionApi();
     registerPiNotesExtension(api);
 
     const setup = await executeTool(tools, "notes_setup", {}, cwd);
     const firstCreate = await executeTool(tools, "notes_new", { name: "dupe", scope: "project" }, cwd);
-    const secondCreate = await executeTool(tools, "notes_new", { name: "dupe", scope: "project" }, cwd);
 
     expect(setup.details.ok).toBe(true);
     expect(setup.text).toContain("Notes setup complete");
     expect(firstCreate.details.ok).toBe(true);
-    expect(secondCreate.details.ok).toBe(false);
-    expect(secondCreate.text).toContain("Note already exists: dupe.md");
+    await expect(executeTool(tools, "notes_new", { name: "dupe", scope: "project" }, cwd)).rejects.toThrow(
+      "Note already exists: dupe.md"
+    );
+  });
+
+  it("truncates large tool output", async () => {
+    const cwd = await createTempCwd();
+    const { api, tools } = createExtensionApi();
+    registerPiNotesExtension(api);
+
+    await executeTool(tools, "notes_new", { name: "large", scope: "project" }, cwd);
+    await executeTool(
+      tools,
+      "notes_append",
+      { name: "large", text: Array.from({ length: 2_100 }, (_, index) => `line-${index}`).join("\n"), scope: "project" },
+      cwd
+    );
+
+    const shown = await executeTool(tools, "notes_show", { name: "large", scope: "project" }, cwd);
+
+    expect(shown.details.ok).toBe(true);
+    expect(shown.text).toContain("[Output truncated:");
+    expect(shown.text).toContain("Use /notes or pi-notes CLI for full output.");
+    expect(shown.text).not.toContain("line-2099");
   });
 });

@@ -1,4 +1,11 @@
-import type { AgentToolResult, ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import {
+  DEFAULT_MAX_BYTES,
+  DEFAULT_MAX_LINES,
+  truncateHead,
+  type AgentToolResult,
+  type ExtensionAPI,
+  type ExtensionContext
+} from "@earendil-works/pi-coding-agent";
 import { Type, type Static, type TSchema, type TUnsafe } from "typebox";
 
 import type { NotesNotifyLevel } from "./commands/context.js";
@@ -109,9 +116,21 @@ async function executeNotesTool(tool: string, argv: readonly string[], ctx: Exte
   });
 
   const ok = messages.every((message) => message.level !== "error");
-  const text = messages.length > 0
+  const rawText = messages.length > 0
     ? messages.map((message) => message.message).join("\n")
     : "No output from notes command.";
+
+  if (!ok) {
+    throw new Error(rawText);
+  }
+
+  const truncation = truncateHead(rawText, {
+    maxBytes: DEFAULT_MAX_BYTES,
+    maxLines: DEFAULT_MAX_LINES
+  });
+  const text = truncation.truncated
+    ? `${truncation.content}\n\n[Output truncated: ${truncation.outputLines} of ${truncation.totalLines} lines, ${truncation.outputBytes} of ${truncation.totalBytes} bytes. Use /notes or pi-notes CLI for full output.]`
+    : truncation.content;
 
   return {
     content: [{ type: "text", text }],

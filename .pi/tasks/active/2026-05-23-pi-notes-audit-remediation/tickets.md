@@ -14,7 +14,7 @@
 - Smoke coverage fails if the source extension entry cannot resolve runtime imports.
 - Any package availability blocker is recorded in evidence/gaps.
 
-## tkt-002: Correct tool errors and output truncation
+## [x] tkt-002: Correct tool errors and output truncation
 
 ### Scope
 
