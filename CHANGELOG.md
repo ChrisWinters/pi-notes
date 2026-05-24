@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0] - 2026-05-24
+
+### Added
+- Agent-facing `notes_*` tools for setup, list, show, new, append, grep, rename, and move flows
+- Tool-first `pi-notes` skill guidance for agent-side note routing
+- Package-specific Pi extension entrypoint at `extensions/pi-notes/index.ts`
+- Hidden compatibility aliases for add/list-style note commands
+
+### Changed
+- Pi package manifest now loads the unique `./extensions/pi-notes/index.ts` extension path
+- Package contents now include the `extensions` entrypoint directory
+- Default generated note headings now use `h2`
+- Architecture and agent docs updated for tool-first extension behavior and local package entrypoints
+
+### Fixed
+- CLI direct-entry detection for symlinked `pi-notes` binaries
+- Pi package imports aligned with current `@earendil-works/pi-coding-agent` APIs
+- Agent tool failures now throw correctly and successful tool output is truncated safely
+- Note mutations are serialized by path to prevent concurrent write races
+
 ## [0.2.0] - 2026-04-06
 
 ### Added
