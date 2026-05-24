@@ -13,8 +13,9 @@ describe("package resource manifest", () => {
       devDependencies?: Record<string, string>;
     };
 
-    expect(packageJson.pi?.extensions).toContain("./src/index.ts");
+    expect(packageJson.pi?.extensions).toContain("./extensions/pi-notes/index.ts");
     expect(packageJson.pi?.skills).toContain("./skills");
+    expect(packageJson.files).toContain("extensions");
     expect(packageJson.files).toContain("skills");
     expect(packageJson.peerDependencies).toHaveProperty("@earendil-works/pi-coding-agent", "*");
     expect(packageJson.peerDependencies).not.toHaveProperty("@mariozechner/pi-coding-agent");
@@ -22,11 +23,13 @@ describe("package resource manifest", () => {
     expect(packageJson.devDependencies).not.toHaveProperty("@sinclair/typebox");
   });
 
-  it("loads the source extension entry with runtime imports", async () => {
-    const extension = await import("../src/index.js");
+  it("loads the package extension entry with runtime imports", async () => {
+    const packageEntry = await import("../extensions/pi-notes/index.js");
+    const sourceEntry = await import("../src/index.js");
 
-    expect(extension.default).toEqual(expect.any(Function));
-    expect(extension.getNotesSetupToolName()).toBe("notes_setup");
+    expect(packageEntry.default).toEqual(expect.any(Function));
+    expect(packageEntry.default).toBe(sourceEntry.default);
+    expect(sourceEntry.getNotesSetupToolName()).toBe("notes_setup");
   });
 
   it("ships pi-notes skill with tool-first routing guidance", async () => {

@@ -27,6 +27,8 @@ Validation evidence to record:
 
 ## tkt-002 — Update tests/context and run validation
 
+Status: Done
+
 Goal: Lock the new entrypoint contract with tests/context updates and validate the full change.
 
 Scope:

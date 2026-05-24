@@ -3,14 +3,17 @@ project:
   purpose: "Pi extension and CLI for deterministic project/global notes"
   refs:
     - package.json
+    - extensions/pi-notes/index.ts
     - src/index.ts
     - src/cli.ts
 
 entrypoints:
   pi_extension:
-    path: src/index.ts
+    path: extensions/pi-notes/index.ts
+    implementation: src/index.ts
     command: "/notes"
     refs:
+      - extensions/pi-notes/index.ts
       - src/index.ts
       - src/commands/notes.ts
   cli_bin:
@@ -85,6 +88,7 @@ integrations:
   pi_package:
     refs:
       - package.json
+      - extensions/pi-notes/index.ts
       - src/index.ts
       - skills/pi-notes/SKILL.md
 

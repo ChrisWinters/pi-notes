@@ -4,8 +4,11 @@
 
 ## Modules
 
+- `extensions/pi-notes/index.ts`
+  - package-specific Pi extension entrypoint declared by `package.json`
+  - delegates to `src/index.ts` without duplicating registration logic
 - `src/index.ts`
-  - registers `/notes` command via `pi.registerCommand`
+  - implements the `/notes` command registration via `pi.registerCommand`
   - registers agent-facing `notes_*` tools via `pi.registerTool`
   - adapts tool execution through shared command handlers, tool error signaling, and output truncation
 - `src/cli.ts`
