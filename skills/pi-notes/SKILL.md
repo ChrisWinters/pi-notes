@@ -56,7 +56,12 @@ Rules:
 - `--global` or “global note” => use `scope: global`.
 - `--project` or “project note” => use `scope: project`.
 - both flags/scopes => ask user to choose one.
-- missing scope for mutation (`notes_new`, `notes_append`, `notes_rename`, `notes_move`) => ask one concise clarification question unless the user clearly accepts default behavior.
+- missing scope for an existing named note mutation (`notes_append`, `notes_rename`, `notes_move`) => check `notes_list` with `scope: project` and `scope: global` before asking.
+  - If the note exists only in project scope, assume `scope: project`.
+  - If the note exists only in global scope, assume `scope: global`.
+  - If the note exists in both scopes, ask which note to use.
+  - If the note exists in neither scope, ask whether to create it or clarify the name/scope.
+- missing scope for new note creation (`notes_new`) => ask one concise clarification question unless the user clearly accepts default behavior.
 - missing scope for read/search/list can use default behavior unless user asks for a specific scope.
 
 ## Prompt-to-tool examples
@@ -91,9 +96,10 @@ Do not silently delete or uninstall notes.
 For note updates/mutations:
 
 1. Resolve note name and scope.
-2. If ambiguous, ask one concise question.
-3. Use the matching `notes_*` tool.
-4. Report the outcome briefly.
+2. For existing named notes with missing scope, list both project and global scopes before asking; assume the only matching scope when exactly one match exists.
+3. If ambiguous, ask one concise question.
+4. Use the matching `notes_*` tool.
+5. Report the outcome briefly.
 
 For overwrite-capable operations (`notes_rename`, `notes_move`):
 
