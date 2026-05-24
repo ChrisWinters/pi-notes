@@ -25,6 +25,6 @@
     "types": ["node", "vitest/globals"],
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
+  "include": ["src/**/*.ts", "extensions/**/*.ts", "tests/**/*.ts"],
   "exclude": ["dist", "node_modules"]
 }

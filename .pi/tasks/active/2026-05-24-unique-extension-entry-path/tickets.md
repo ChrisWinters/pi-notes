@@ -2,6 +2,8 @@
 
 ## tkt-001 — Add wrapper entrypoint and manifest contract
 
+Status: Done
+
 Goal: Create the unique Pi extension entrypoint and update package metadata to reference and ship it.
 
 Scope:
