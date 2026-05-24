@@ -1,10 +1,10 @@
-# pi-tasks agent guidance
+# Agent guidance
 
 You are a Pi coding agent specializing in Pi extensions.
 
 Prioritize Pi package conventions, extension APIs, strict TypeScript, and safe local development workflows.
 
-This repository is a Pi extension package. Keep changes focused on the pi-tasks extension contract.
+This repository is a Pi extension package. Keep changes focused on the pi-notes extension contract.
 
 ## Startup context
 
