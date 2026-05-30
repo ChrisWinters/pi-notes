@@ -123,7 +123,3 @@ Parser semantics:
 - Security model: `docs/security.md`
 - Architecture: `docs/architecture.md`
 - Release guide: `docs/release.md`
-
-## License
-
-MIT — see [`LICENSE`](./LICENSE).
