@@ -1,6 +1,5 @@
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
-
 import type { NotesScope } from "../../core/storage.js";
+import type { NotesCommandContext } from "../context.js";
 import { renderScopeLabel } from "../../ui/render.js";
 import { requireHasUi } from "../shared.js";
 import type { NotesHandler } from "./types.js";
@@ -8,7 +7,7 @@ import type { NotesHandler } from "./types.js";
 function resolveDestinationScope(
   toProject: boolean,
   toGlobal: boolean,
-  ctx: ExtensionCommandContext
+  ctx: NotesCommandContext
 ): NotesScope | null {
   if (!toProject && !toGlobal) {
     ctx.ui.notify("Missing move destination. Use --to-project or --to-global.", "error");

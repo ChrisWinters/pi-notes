@@ -1,14 +1,27 @@
 import { describe, expect, it } from "vitest";
 
-import { createEmptyNoteMarkdown, parseNoteMarkdown, renderNoteMarkdown, withUpdatedTimestamp } from "../src/core/format.js";
+import {
+  createEmptyNoteMarkdown,
+  parseNoteMarkdown,
+  renderNoteMarkdown,
+  withUpdatedTimestamp
+} from "../src/core/format.js";
 
 describe("createEmptyNoteMarkdown", () => {
   it("renders a markdown template with frontmatter", () => {
     const markdown = createEmptyNoteMarkdown("API Ideas", "2026-04-05T12:00:00.000Z");
 
-    expect(markdown).toContain("title: API Ideas");
-    expect(markdown).toContain("updated: 2026-04-05T12:00:00.000Z");
-    expect(markdown).toContain("# API Ideas");
+    expect(markdown).toBe(
+      [
+        "---",
+        "title: API Ideas",
+        "updated: 2026-04-05T12:00:00.000Z",
+        "---",
+        "",
+        "## API Ideas",
+        ""
+      ].join("\n")
+    );
   });
 });
 
@@ -41,6 +54,6 @@ describe("parseNoteMarkdown + renderNoteMarkdown", () => {
     const parsed = parseNoteMarkdown(updated);
     expect(parsed.frontmatter.updated).toBe("2026-04-05T13:00:00.000Z");
     expect(parsed.frontmatter.title).toBe("Roadmap");
-    expect(parsed.body).toContain("# Roadmap");
+    expect(parsed.body).toContain("## Roadmap");
   });
 });

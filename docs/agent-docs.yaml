@@ -1,0 +1,130 @@
+project:
+  package: "@tribalnerd/pi-notes"
+  purpose: "Pi extension and CLI for deterministic project/global notes"
+  refs:
+    - package.json
+    - extensions/pi-notes/index.ts
+    - src/index.ts
+    - src/cli.ts
+
+entrypoints:
+  pi_extension:
+    path: extensions/pi-notes/index.ts
+    implementation: src/index.ts
+    command: "/notes"
+    refs:
+      - extensions/pi-notes/index.ts
+      - src/index.ts
+      - src/commands/notes.ts
+  cli_bin:
+    bin: "pi-notes"
+    path: src/cli.ts
+    built: dist/src/cli.js
+    refs:
+      - package.json
+      - src/cli.ts
+
+architecture:
+  shared_command_routing:
+    note: "Extension and CLI both route to shared command handlers."
+    refs:
+      - src/commands/notes.ts
+      - src/commands/handlers/index.ts
+  cli_entry_detection:
+    note: "Direct execution compares realpaths so npm/global symlink bins dispatch. Importing stays side-effect safe."
+    refs:
+      - src/cli.ts
+      - tests/cli.test.ts
+  context_boundary:
+    note: "Handlers receive cwd, UI capability, notifier, confirm, and editor through NotesCommandContext."
+    refs:
+      - src/commands/context.ts
+      - src/cli.ts
+
+runtime_flows:
+  help:
+    note: "No args, help, commands, --help, and -h render NOTES_USAGE."
+    refs:
+      - src/cli.ts
+      - src/commands/shared.ts
+  non_interactive_cli:
+    note: "CLI prompts are unavailable unless TTY is interactive or --yes/-y is supplied."
+    refs:
+      - src/cli.ts
+      - src/commands/shared.ts
+  storage_scope:
+    note: "Default create scope is project unless --global selects global."
+    refs:
+      - src/commands/shared.ts
+      - src/core/storage.ts
+
+contracts:
+  command_grammar:
+    refs:
+      - src/commands/parser.ts
+      - src/commands/shared.ts
+      - tests/parser.test.ts
+  note_storage:
+    refs:
+      - src/core/storage.ts
+      - src/core/naming.ts
+      - tests/storage.test.ts
+  cli_import_safety:
+    refs:
+      - src/cli.ts
+      - tests/cli.test.ts
+
+state:
+  project_notes:
+    path: .pi/notes
+    refs:
+      - src/core/storage.ts
+  global_notes:
+    path: ~/.pi/notes
+    refs:
+      - src/core/storage.ts
+
+integrations:
+  pi_package:
+    refs:
+      - package.json
+      - extensions/pi-notes/index.ts
+      - src/index.ts
+      - skills/pi-notes/SKILL.md
+
+validation:
+  required_checks:
+    - npm run lint
+    - npm run typecheck
+    - npm run test
+    - npm run build
+  smoke_checks:
+    - "node dist/src/cli.js --help"
+    - "symlink/chmod local dist/src/cli.js then run pi-notes --help"
+  refs:
+    - package.json
+    - tests/cli.test.ts
+
+operations:
+  build:
+    note: "Do not hand-edit dist; regenerate with npm run build."
+    refs:
+      - package.json
+      - tsconfig.build.json
+
+constraints:
+  safety:
+    - "Reject unsafe note names and paths in core validation."
+    - "Confirm destructive commands unless UI is available or --yes/-y is supplied."
+    - "Do not change command grammar without docs and migration notes."
+  refs:
+    - src/core/naming.ts
+    - src/commands/shared.ts
+    - AGENTS.md
+
+glossary:
+  project_scope: ".pi/notes under current project cwd"
+  global_scope: "~/.pi/notes"
+  direct_cli_entry: "src/cli.ts running as process.argv[1], including symlinked npm bins"
+
+open_questions: []

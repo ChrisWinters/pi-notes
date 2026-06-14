@@ -1,14 +1,15 @@
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
-
 import { NotesError } from "../core/errors.js";
 import { NotesStorage } from "../core/storage.js";
+import type { NotesCommandContext } from "./context.js";
 import { NOTES_HANDLERS } from "./handlers/index.js";
-import { parseNotesCommandInput } from "./parser.js";
+import { parseNotesCommandArgv, parseNotesCommandInput, type ParsedNotesCommand } from "./parser.js";
 import { NOTES_USAGE } from "./shared.js";
 
-export async function handleNotesCommand(args: string, ctx: ExtensionCommandContext): Promise<void> {
-  const parsed = parseNotesCommandInput(args);
-
+export async function handleParsedNotesCommand(
+  parsed: ParsedNotesCommand,
+  ctx: NotesCommandContext,
+  storage?: NotesStorage
+): Promise<void> {
   if (parsed.subcommand === undefined || parsed.subcommand.length === 0) {
     ctx.ui.notify(NOTES_USAGE, "info");
     return;
@@ -21,12 +22,12 @@ export async function handleNotesCommand(args: string, ctx: ExtensionCommandCont
   }
 
   try {
-    const storage = new NotesStorage({ cwd: ctx.cwd });
+    const resolvedStorage = storage ?? new NotesStorage({ cwd: ctx.cwd });
     await handler({
       args: parsed.args,
       scopeSelection: parsed.scopeSelection,
       moveSelection: parsed.moveSelection,
-      storage,
+      storage: resolvedStorage,
       ctx
     });
   } catch (error: unknown) {
@@ -37,4 +38,14 @@ export async function handleNotesCommand(args: string, ctx: ExtensionCommandCont
 
     throw error;
   }
+}
+
+export async function handleNotesCommand(args: string, ctx: NotesCommandContext): Promise<void> {
+  const parsed = parseNotesCommandInput(args);
+  await handleParsedNotesCommand(parsed, ctx);
+}
+
+export async function handleNotesCommandArgv(argv: readonly string[], ctx: NotesCommandContext): Promise<void> {
+  const parsed = parseNotesCommandArgv(argv);
+  await handleParsedNotesCommand(parsed, ctx);
 }

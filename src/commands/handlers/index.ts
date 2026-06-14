@@ -6,6 +6,7 @@ import { handleHelp } from "./help.js";
 import { handleLs } from "./ls.js";
 import { handleMove } from "./move.js";
 import { handleNew } from "./new.js";
+import { handleRename } from "./rename.js";
 import { handleRewrite } from "./rewrite.js";
 import { handleRm } from "./rm.js";
 import { handleSetup } from "./setup.js";
@@ -17,13 +18,16 @@ export const NOTES_HANDLERS: Readonly<Record<string, NotesHandler>> = {
   commands: handleHelp,
   setup: handleSetup,
   ls: handleLs,
+  list: handleLs,
   show: handleShow,
   new: handleNew,
+  add: handleNew,
   edit: handleEdit,
   append: handleAppend,
   rm: handleRm,
   grep: handleGrep,
   rewrite: handleRewrite,
   move: handleMove,
+  rename: handleRename,
   uninstall: handleUninstall
 };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseNotesCommandInput } from "../src/commands/parser.js";
+import { parseNotesCommandArgv, parseNotesCommandInput } from "../src/commands/parser.js";
 
 describe("parseNotesCommandInput", () => {
   it("parses trailing scope flags without stripping middle content", () => {
@@ -73,5 +73,22 @@ describe("parseNotesCommandInput", () => {
     expect(parsed.subcommand).toBe("append");
     expect(parsed.moveSelection.toGlobal).toBe(false);
     expect(parsed.args).toEqual(["daily", "--to-global"]);
+  });
+
+  it("parses argv tokens with the same semantics", () => {
+    const parsed = parseNotesCommandArgv(["move", "handoff", "--to-global", "--project"]);
+
+    expect(parsed.subcommand).toBe("move");
+    expect(parsed.scopeSelection.forceProject).toBe(true);
+    expect(parsed.moveSelection.toGlobal).toBe(true);
+    expect(parsed.args).toEqual(["handoff"]);
+  });
+
+  it("parses rename overwrite edge flag", () => {
+    const parsed = parseNotesCommandInput("rename old-name new-name --overwrite");
+
+    expect(parsed.subcommand).toBe("rename");
+    expect(parsed.moveSelection.overwrite).toBe(true);
+    expect(parsed.args).toEqual(["old-name", "new-name"]);
   });
 });

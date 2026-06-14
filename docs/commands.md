@@ -1,6 +1,12 @@
 # Commands
 
-`pi-notes` exposes the `/notes` command family via `pi.registerCommand("notes", ...)`.
+`pi-notes` exposes three surfaces:
+
+- `/notes` command family via `pi.registerCommand("notes", ...)`
+- agent-facing `notes_*` tools via `pi.registerTool(...)`
+- `pi-notes` package CLI (`bin`) for deterministic script/terminal usage
+
+It also bundles a skill at `skills/pi-notes/SKILL.md` (invokable as `/skill:pi-notes`) to guide intent routing. The skill prefers registered `notes_*` tools when available, then falls back to `/notes` or the CLI for restricted or unavailable tool flows.
 
 ## Syntax
 
@@ -17,7 +23,33 @@
 - `/notes grep <query> [--project|--global]`
 - `/notes rewrite <name> <instruction> [--project|--global]`
 - `/notes move <name> --to-global|--to-project [--project|--global] [--overwrite]`
+- `/notes rename <from> <to> [--project|--global] [--overwrite]`
 - `/notes uninstall [--project] [--global]`
+
+Agent tool equivalents:
+
+- `notes_setup`
+- `notes_list`
+- `notes_show`
+- `notes_new`
+- `notes_append`
+- `notes_grep`
+- `notes_rename`
+- `notes_move`
+
+No destructive/editor tools are registered; `rm`, `uninstall`, `edit`, and `rewrite` remain explicit command/CLI handoffs.
+
+CLI equivalents:
+
+- `pi-notes ls [--project|--global]`
+- `pi-notes show <name> [--project|--global]`
+- `pi-notes new <name> [--project|--global]`
+- `pi-notes append <name> <text> [--project|--global]`
+- `pi-notes rm <name> [--project|--global] [--yes]`
+- `pi-notes grep <query> [--project|--global]`
+- `pi-notes move <name> --to-global|--to-project [--project|--global] [--overwrite]`
+- `pi-notes rename <from> <to> [--project|--global] [--overwrite]`
+- `pi-notes uninstall [--project] [--global] [--yes]`
 
 ## Examples
 
@@ -27,7 +59,10 @@
 - `/notes append roadmap "add launch checklist"`
 - `/notes show roadmap`
 - `/notes move roadmap --to-global --project`
+- `/notes rename roadmap roadmap-q2 --project`
 - `/notes uninstall --project`
+- `pi-notes show npm --global`
+- `pi-notes rm npm --global --yes`
 
 ## Scope flags
 
@@ -64,7 +99,7 @@ Examples:
 
 ## Non-interactive behavior
 
-If `ctx.hasUI` is false:
+For `/notes` in Pi, if `ctx.hasUI` is false:
 
 - `rm` is blocked with an explicit error
 - `rewrite` is blocked with an explicit error
@@ -72,7 +107,13 @@ If `ctx.hasUI` is false:
 - `uninstall` is blocked with an explicit error
 - `move --overwrite` confirmation flow is blocked with an explicit error
 
+For `pi-notes` CLI:
+
+- destructive operations (`rm`, `uninstall`) require interactive confirmation unless `--yes` is provided
+- if no interactive TTY and no `--yes`, destructive actions fail safely
+- CLI `edit`/`rewrite` are intentionally not provided; use interactive `/notes` for editor-based flows
+
 ## Command collision note
 
 Pi may suffix duplicate command names when multiple extensions register the same command, for example `/notes:1`.
-See upstream Pi extensions docs: https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/extensions.md
+See upstream Pi extensions docs: https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/docs/extensions.md

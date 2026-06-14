@@ -4,9 +4,10 @@ import { tmpdir } from "node:os";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 
 import { handleNotesCommand } from "../src/commands/notes.js";
+import { NOTES_USAGE } from "../src/commands/shared.js";
 
 interface TestUi {
   readonly notify: ReturnType<typeof vi.fn>;
@@ -98,6 +99,29 @@ describe("handleNotesCommand", () => {
     const notifyCalls = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
     expect(notifyCalls.some((message) => message.includes("Updated [project] daily.md"))).toBe(true);
     expect(notifyCalls.some((message) => message.includes("[project] daily.md"))).toBe(true);
+  });
+
+  it("supports hidden add and list aliases", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("add alias-note --project", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("list --project", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("show alias-note --project", ctx as unknown as ExtensionCommandContext);
+
+    const notifyCalls = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(notifyCalls.some((message) => message.includes("Created [project] alias-note.md"))).toBe(true);
+    expect(notifyCalls.some((message) => message.includes("[project] alias-note.md"))).toBe(true);
+    expect(notifyCalls.some((message) => message.includes("## alias-note"))).toBe(true);
+  });
+
+  it("keeps hidden aliases out of usage and README command lists", async () => {
+    const readme = await readFile(join(process.cwd(), "README.md"), "utf8");
+
+    expect(NOTES_USAGE).not.toContain("/notes add");
+    expect(NOTES_USAGE).not.toContain("/notes list");
+    expect(readme).not.toContain("/notes add");
+    expect(readme).not.toContain("/notes list");
   });
 
   it("preserves literal scope-like tokens inside append content", async () => {
@@ -313,7 +337,7 @@ describe("handleNotesCommand", () => {
     expect(await pathExists(starterPath)).toBe(true);
 
     const starter = await readFile(starterPath, "utf8");
-    expect(starter).toContain("# Welcome to notes");
+    expect(starter).toContain("---\n\n## Welcome to notes\n\nUse /notes new <name> to create notes.");
 
     const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
     expect(messages.some((message) => message.includes("Run /notes show note --global"))).toBe(true);
@@ -385,6 +409,32 @@ describe("handleNotesCommand", () => {
 
     const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
     expect(messages.some((message) => message.includes("Missing move destination"))).toBe(true);
+  });
+
+  it("renames a note in project scope", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    await handleNotesCommand("new release-plan", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("rename release-plan launch-plan", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("show launch-plan", ctx as unknown as ExtensionCommandContext);
+
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Renamed [project] release-plan.md -> launch-plan.md"))).toBe(true);
+    expect(messages.some((message) => message.includes("[project] launch-plan.md"))).toBe(true);
+  });
+
+  it("requires confirmation for rename overwrite", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, false);
+
+    await handleNotesCommand("new alpha", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("new beta", ctx as unknown as ExtensionCommandContext);
+    await handleNotesCommand("rename alpha beta --overwrite", ctx as unknown as ExtensionCommandContext);
+
+    expect(ctx.ui.confirm).toHaveBeenCalledTimes(1);
+    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
+    expect(messages.some((message) => message.includes("Rename cancelled."))).toBe(true);
   });
 
   it("refuses uninstall when UI is unavailable", async () => {

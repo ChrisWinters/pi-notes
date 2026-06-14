@@ -1,6 +1,5 @@
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
-
 import type { NotesScope, ScopeSelection } from "../core/storage.js";
+import type { NotesCommandContext } from "./context.js";
 import { resolveScopePreference } from "../core/storage.js";
 
 export const NOTES_USAGE = [
@@ -18,6 +17,7 @@ export const NOTES_USAGE = [
   "  /notes grep <query> [--project|--global]",
   "  /notes rewrite <name> <instruction> [--project|--global]",
   "  /notes move <name> --to-global|--to-project [--project|--global] [--overwrite]",
+  "  /notes rename <from> <to> [--project|--global] [--overwrite]",
   "  /notes uninstall [--project] [--global]"
 ].join("\n");
 
@@ -34,7 +34,7 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
-export function requireHasUi(ctx: ExtensionCommandContext): boolean {
+export function requireHasUi(ctx: NotesCommandContext): boolean {
   if (ctx.hasUI) {
     return true;
   }
@@ -49,7 +49,8 @@ export function renderSetupStarterNote(now: string): string {
     "title: note",
     `updated: ${now}`,
     "---",
-    "# Welcome to notes",
+    "",
+    "## Welcome to notes",
     "",
     "Use /notes new <name> to create notes.",
     "Use /notes edit <name> to preserve markdown formatting.",

@@ -44,6 +44,25 @@ Before release:
 
 ## Publish
 
+### Quick commands (after version bump)
+
+If publishing locally, first confirm npm auth:
+
+```bash
+npm whoami || npm login
+```
+
+Then use one of these publish commands:
+
+```bash
+npm publish --access public
+npm publish --provenance --access public
+```
+
+- first command: standard npm publish
+- second command: publish with provenance attestation
+- `npm login` is not needed every time; only when not already authenticated
+
 ### GitHub Actions (recommended, with provenance)
 
 This repo includes `.github/workflows/publish.yml`, which publishes with:
@@ -70,6 +89,7 @@ After trusted publishing is configured, the workflow publishes without an `NPM_T
 ### Local fallback
 
 ```bash
+npm whoami || npm login
 npm publish --access public
 ```
 

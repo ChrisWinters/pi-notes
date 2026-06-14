@@ -5,7 +5,7 @@
 - Project scope: `<cwd>/.pi/notes/`
 - Global scope: `~/.pi/notes/`
 
-`/notes setup` initializes both directories if missing.
+`/notes setup` (and `pi-notes setup`) initialize both directories if missing.
 
 ## Scope resolution
 
@@ -60,6 +60,8 @@ Optional keys:
 All write paths (`writeNote`, `appendToNote`, rewrite apply, edit apply) refresh `updated` timestamp before persistence.
 
 `move` preserves markdown content/frontmatter as-is while changing scope location.
+
+`rename` preserves markdown content/frontmatter while changing note filename in-place within the resolved scope.
 
 ## Setup and lifecycle operations
 

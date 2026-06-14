@@ -4,6 +4,6 @@
     "noEmit": false,
     "emitDeclarationOnly": false
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "extensions/**/*.ts"],
   "exclude": ["tests", "**/*.test.ts", "dist", "node_modules"]
 }
