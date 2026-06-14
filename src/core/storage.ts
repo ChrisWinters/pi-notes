@@ -566,7 +566,7 @@ export class NotesStorage {
   private async listFromScope(scope: NotesScope): Promise<readonly StoredNote[]> {
     const directory = this.getNotesDirectory(scope);
 
-    let files: readonly string[] = [];
+    let files: readonly string[];
     try {
       files = await readdir(directory);
     } catch (error: unknown) {

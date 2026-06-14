@@ -1,6 +1,5 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
-import importPlugin from "eslint-plugin-import";
 
 export default tseslint.config(
   {
@@ -17,14 +16,6 @@ export default tseslint.config(
       parserOptions: {
         project: true,
         tsconfigRootDir: import.meta.dirname
-      }
-    },
-    plugins: {
-      import: importPlugin
-    },
-    settings: {
-      "import/resolver": {
-        typescript: true
       }
     },
     rules: {
