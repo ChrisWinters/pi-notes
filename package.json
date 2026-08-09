@@ -56,16 +56,19 @@
     ]
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
+    "@earendil-works/pi-coding-agent": "^0.84.1"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "^0.79.3",
+    "@earendil-works/pi-coding-agent": "^0.84.1",
     "@eslint/js": "^10.0.1",
-    "@types/node": "^25.9.3",
-    "eslint": "^10.5.0",
-    "typebox": "1.1.38",
+    "@types/node": "^26.2.0",
+    "eslint": "^10.8.1",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.61.0",
-    "vitest": "^4.1.8"
+    "typescript-eslint": "^8.66.0",
+    "vitest": "^4.1.10"
+  },
+  "allowScripts": {
+    "@google/genai@1.52.0": true,
+    "protobufjs@7.6.5": true
   }
 }
