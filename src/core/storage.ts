@@ -344,23 +344,7 @@ export class NotesStorage {
         throw new NotesError(`Destination already has note: ${source.fileName}. Re-run with --overwrite.`);
       }
 
-      if (input.overwrite) {
-        await writeFile(destinationPath, source.markdown, "utf8");
-      } else {
-        let handle: FileHandle | undefined;
-        try {
-          handle = await open(destinationPath, "wx");
-          await handle.writeFile(source.markdown, "utf8");
-        } catch (error: unknown) {
-          if (isAlreadyExists(error)) {
-            throw new NotesError(`Destination already has note: ${source.fileName}. Re-run with --overwrite.`);
-          }
-
-          throw error;
-        } finally {
-          await handle?.close();
-        }
-      }
+      await this.writeDestination(destinationPath, source.markdown, input.overwrite, source.fileName);
 
       await rm(source.path, { force: true });
 
@@ -406,25 +390,7 @@ export class NotesStorage {
         );
       }
 
-      if (input.overwrite) {
-        await writeFile(destinationPath, source.markdown, "utf8");
-      } else {
-        let handle: FileHandle | undefined;
-        try {
-          handle = await open(destinationPath, "wx");
-          await handle.writeFile(source.markdown, "utf8");
-        } catch (error: unknown) {
-          if (isAlreadyExists(error)) {
-            throw new NotesError(
-              `Destination already has note: ${destinationFileName}. Re-run with --overwrite.`
-            );
-          }
-
-          throw error;
-        } finally {
-          await handle?.close();
-        }
-      }
+      await this.writeDestination(destinationPath, source.markdown, input.overwrite, destinationFileName);
 
       await rm(source.path, { force: true });
 
@@ -476,6 +442,32 @@ export class NotesStorage {
       const haystack = `${note.fileName}\n${note.markdown}`.toLowerCase();
       return haystack.includes(normalizedQuery);
     });
+  }
+
+  private async writeDestination(
+    destinationPath: string,
+    markdown: string,
+    overwrite: boolean,
+    destinationFileName: string
+  ): Promise<void> {
+    if (overwrite) {
+      await writeFile(destinationPath, markdown, "utf8");
+      return;
+    }
+
+    let handle: FileHandle | undefined;
+    try {
+      handle = await open(destinationPath, "wx");
+      await handle.writeFile(markdown, "utf8");
+    } catch (error: unknown) {
+      if (isAlreadyExists(error)) {
+        throw new NotesError(`Destination already has note: ${destinationFileName}. Re-run with --overwrite.`);
+      }
+
+      throw error;
+    } finally {
+      await handle?.close();
+    }
   }
 
   private async writeNoteInternal(input: WriteNoteInput): Promise<StoredNote> {

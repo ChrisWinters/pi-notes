@@ -226,10 +226,10 @@ describe("NotesStorage", () => {
     });
   });
 
-  it("fails move when destination exists and overwrite is disabled", async () => {
+  it("fails move when destination exists and preserves both notes", async () => {
     await withStorage(async (storage) => {
-      await storage.createNote({ name: "dupe", scope: "project" });
-      await storage.createNote({ name: "dupe", scope: "global" });
+      await storage.createNote({ name: "dupe", scope: "project", title: "Project Source" });
+      await storage.createNote({ name: "dupe", scope: "global", title: "Global Destination" });
 
       await expect(
         storage.moveNote({
@@ -239,6 +239,34 @@ describe("NotesStorage", () => {
           overwrite: false
         })
       ).rejects.toThrowError("Destination already has note");
+
+      const source = await storage.readNote("dupe", { forceProject: true, forceGlobal: false });
+      const destination = await storage.readNote("dupe", { forceProject: false, forceGlobal: true });
+      expect(source?.markdown).toContain("Project Source");
+      expect(destination?.markdown).toContain("Global Destination");
+    });
+  });
+
+  it("overwrites a move destination only after writing source markdown", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "replace", scope: "project", title: "Project Source" });
+      await storage.createNote({ name: "replace", scope: "global", title: "Global Destination" });
+
+      const moved = await storage.moveNote({
+        name: "replace",
+        selection: { forceProject: true, forceGlobal: false },
+        destinationScope: "global",
+        overwrite: true
+      });
+
+      expect(moved.overwrittenDestination).toBe(true);
+      expect(moved.source.scope).toBe("project");
+      expect(moved.destination.scope).toBe("global");
+      expect(moved.destination.markdown).toContain("Project Source");
+      expect(await storage.readNote("replace", { forceProject: true, forceGlobal: false })).toBeNull();
+      const destination = await storage.readNote("replace", { forceProject: false, forceGlobal: true });
+      expect(destination?.markdown).toContain("Project Source");
+      expect(destination?.markdown).not.toContain("Global Destination");
     });
   });
 
@@ -299,10 +327,10 @@ describe("NotesStorage", () => {
     });
   });
 
-  it("fails rename when destination exists without overwrite", async () => {
+  it("fails rename when destination exists and preserves both notes", async () => {
     await withStorage(async (storage) => {
-      await storage.createNote({ name: "alpha", scope: "project" });
-      await storage.createNote({ name: "beta", scope: "project" });
+      await storage.createNote({ name: "alpha", scope: "project", title: "Alpha Source" });
+      await storage.createNote({ name: "beta", scope: "project", title: "Beta Destination" });
 
       await expect(
         storage.renameNote({
@@ -312,6 +340,35 @@ describe("NotesStorage", () => {
           overwrite: false
         })
       ).rejects.toThrowError("Destination already has note");
+
+      const source = await storage.readNote("alpha", { forceProject: true, forceGlobal: false });
+      const destination = await storage.readNote("beta", { forceProject: true, forceGlobal: false });
+      expect(source?.markdown).toContain("Alpha Source");
+      expect(destination?.markdown).toContain("Beta Destination");
+    });
+  });
+
+  it("overwrites a rename destination and preserves result metadata", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "alpha", scope: "project", title: "Alpha Source" });
+      await storage.createNote({ name: "beta", scope: "project", title: "Beta Destination" });
+
+      const renamed = await storage.renameNote({
+        fromName: "alpha",
+        toName: "beta",
+        selection: { forceProject: true, forceGlobal: false },
+        overwrite: true
+      });
+
+      expect(renamed.overwrittenDestination).toBe(true);
+      expect(renamed.source.fileName).toBe("alpha.md");
+      expect(renamed.destination.fileName).toBe("beta.md");
+      expect(renamed.destination.name).toBe("beta");
+      expect(renamed.destination.markdown).toContain("Alpha Source");
+      expect(await storage.readNote("alpha", { forceProject: true, forceGlobal: false })).toBeNull();
+      const destination = await storage.readNote("beta", { forceProject: true, forceGlobal: false });
+      expect(destination?.markdown).toContain("Alpha Source");
+      expect(destination?.markdown).not.toContain("Beta Destination");
     });
   });
 
