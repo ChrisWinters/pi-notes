@@ -5,7 +5,7 @@ import { NOTES_HANDLERS } from "./handlers/index.js";
 import { parseNotesCommandArgv, parseNotesCommandInput, type ParsedNotesCommand } from "./parser.js";
 import { NOTES_USAGE } from "./shared.js";
 
-export async function handleParsedNotesCommand(
+async function handleParsedNotesCommand(
   parsed: ParsedNotesCommand,
   ctx: NotesCommandContext,
   storage?: NotesStorage
