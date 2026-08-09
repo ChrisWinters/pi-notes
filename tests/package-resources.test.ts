@@ -10,6 +10,7 @@ describe("package resource manifest", () => {
       pi?: { extensions?: string[]; skills?: string[] };
       files?: string[];
       peerDependencies?: Record<string, string>;
+      dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };
 
@@ -17,10 +18,12 @@ describe("package resource manifest", () => {
     expect(packageJson.pi?.skills).toContain("./skills");
     expect(packageJson.files).toContain("extensions");
     expect(packageJson.files).toContain("skills");
-    expect(packageJson.peerDependencies).toHaveProperty("@earendil-works/pi-coding-agent", "*");
+    expect(packageJson.peerDependencies?.["@earendil-works/pi-coding-agent"]).toBe(
+      packageJson.devDependencies?.["@earendil-works/pi-coding-agent"]
+    );
     expect(packageJson.peerDependencies).not.toHaveProperty("@mariozechner/pi-coding-agent");
-    expect(packageJson.devDependencies).toHaveProperty("typebox");
-    expect(packageJson.devDependencies).not.toHaveProperty("@sinclair/typebox");
+    expect(packageJson.dependencies).toHaveProperty("typebox");
+    expect(packageJson.dependencies).not.toHaveProperty("@sinclair/typebox");
   });
 
   it("loads the package extension entry with runtime imports", async () => {
