@@ -2,17 +2,20 @@ import {
   CONFIG_DIR_NAME,
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
+  formatSize,
   truncateHead,
   withFileMutationQueue,
   type AgentToolResult,
   type ExtensionAPI,
-  type ExtensionContext
+  type ExtensionContext,
+  type TruncationResult
 } from "@earendil-works/pi-coding-agent";
 import { Type, type Static, type TSchema, type TUnsafe } from "typebox";
 
 import type { NotesCommandStatus, NotesNotifyLevel } from "./commands/context.js";
 import { handleNotesCommand, handleNotesCommandArgv } from "./commands/notes.js";
 import { createQueuedMutationCoordinator } from "./core/mutation.js";
+import { OUTPUT_ARTIFACT_RETENTION_MS, persistFullToolOutput } from "./core/output-artifact.js";
 
 const NOTES_SETUP_TOOL_NAME = "notes_setup";
 const NOTES_LIST_TOOL_NAME = "notes_list";
@@ -27,6 +30,7 @@ const piMutationCoordinator = createQueuedMutationCoordinator(withFileMutationQu
 
 const NOTES_SCOPE_VALUES = ["default", "project", "global"] as const;
 const NOTES_MOVE_DESTINATION_VALUES = ["project", "global"] as const;
+const OUTPUT_LIMIT_DESCRIPTION = `Output is truncated to ${DEFAULT_MAX_LINES} lines or ${formatSize(DEFAULT_MAX_BYTES)}; complete truncated output is retained in an owner-only temporary artifact for 24 hours.`;
 
 type NotesToolScope = (typeof NOTES_SCOPE_VALUES)[number];
 type NotesMoveDestination = (typeof NOTES_MOVE_DESTINATION_VALUES)[number];
@@ -41,7 +45,9 @@ interface NotesToolDetails {
   readonly argv: readonly string[];
   readonly ok: boolean;
   readonly status: NotesCommandStatus;
-  readonly messages: readonly NotesToolMessage[];
+  readonly truncation?: TruncationResult;
+  readonly fullOutputPath?: string;
+  readonly artifactRetentionMs?: number;
 }
 
 type NotesToolResult = AgentToolResult<NotesToolDetails>;
@@ -146,18 +152,30 @@ async function executeNotesTool(
     maxBytes: DEFAULT_MAX_BYTES,
     maxLines: DEFAULT_MAX_LINES
   });
-  const text = truncation.truncated
-    ? `${truncation.content}\n\n[Output truncated: ${truncation.outputLines} of ${truncation.totalLines} lines, ${truncation.outputBytes} of ${truncation.totalBytes} bytes. Use /notes or pi-notes CLI for full output.]`
-    : truncation.content;
+  if (truncation.truncated) {
+    const fullOutputPath = await persistFullToolOutput(rawText);
+    const text = `${truncation.content}\n\n[Output truncated: ${truncation.outputLines} of ${truncation.totalLines} lines, ${truncation.outputBytes} of ${truncation.totalBytes} bytes. Full output saved to: ${fullOutputPath}]`;
+    return {
+      content: [{ type: "text", text }],
+      details: {
+        tool,
+        argv,
+        ok,
+        status: outcome.status,
+        truncation,
+        fullOutputPath,
+        artifactRetentionMs: OUTPUT_ARTIFACT_RETENTION_MS
+      }
+    };
+  }
 
   return {
-    content: [{ type: "text", text }],
+    content: [{ type: "text", text: truncation.content }],
     details: {
       tool,
       argv,
       ok,
-      status: outcome.status,
-      messages
+      status: outcome.status
     }
   };
 }
@@ -233,7 +251,7 @@ function registerPiNotesTools(pi: ExtensionAPI): void {
   registerNotesTool(pi, {
     name: NOTES_LIST_TOOL_NAME,
     label: "List Notes",
-    description: "List notes in project, global, or default scope.",
+    description: `List notes in project, global, or default scope. ${OUTPUT_LIMIT_DESCRIPTION}`,
     promptSnippet: "List pi-notes notes in project or global scope.",
     promptGuidelines: ["Use notes_list when the user asks to list or browse pi-notes notes."],
     parameters: ScopeParameters,
@@ -243,7 +261,7 @@ function registerPiNotesTools(pi: ExtensionAPI): void {
   registerNotesTool(pi, {
     name: NOTES_SHOW_TOOL_NAME,
     label: "Show Note",
-    description: "Show a note by name from project, global, or default scope.",
+    description: `Show a note by name from project, global, or default scope. ${OUTPUT_LIMIT_DESCRIPTION}`,
     promptSnippet: "Show a pi-notes note by name.",
     promptGuidelines: ["Use notes_show when the user asks to read, show, or open a note and the note name is known."],
     parameters: NamedNoteParameters,
@@ -273,7 +291,7 @@ function registerPiNotesTools(pi: ExtensionAPI): void {
   registerNotesTool(pi, {
     name: NOTES_GREP_TOOL_NAME,
     label: "Search Notes",
-    description: "Search notes for a query in project, global, or default scope.",
+    description: `Search notes for a query in project, global, or default scope. ${OUTPUT_LIMIT_DESCRIPTION}`,
     promptSnippet: "Search pi-notes notes by query.",
     promptGuidelines: ["Use notes_grep when the user asks to search or grep notes."],
     parameters: GrepParameters,
@@ -308,6 +326,13 @@ export default function registerPiNotesExtension(pi: ExtensionAPI): void {
   pi.registerCommand("notes", {
     description: "Manage notes in project (.pi/notes) or global (~/.pi/notes) scope",
     handler: async (args, ctx) => {
+      if (!ctx.hasUI) {
+        const cliArgs = args.trim().length === 0 ? "help" : args;
+        throw new Error(
+          `Direct /notes commands are unsupported in ${ctx.mode} mode. Use the standalone CLI instead: pi-notes ${cliArgs}`
+        );
+      }
+
       await handleNotesCommand(args, {
         ...ctx,
         configDirName: CONFIG_DIR_NAME,

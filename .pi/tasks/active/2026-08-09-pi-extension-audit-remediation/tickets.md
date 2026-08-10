@@ -17,7 +17,7 @@ Execute in order. A ticket is complete only when its notes/evidence are current,
   - Delivers: ST-003; error signaling independent of notification level; no agent overwrite; exact conflict handoffs.
   - Depends on: tkt-001 and tkt-002 operation contexts.
 
-- [ ] **tkt-004 — Recover truncated output and fix mode observability**
+- [x] **tkt-004 — Recover truncated output and fix mode observability**
   - Scope: tool output adapter/temp artifacts, Pi mode prototype/adapter, RPC/JSON/print/tool tests.
   - Delivers: ST-004; complete output recovery and no silent headless commands.
   - Depends on: tkt-003 typed outcomes.

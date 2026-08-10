@@ -1,6 +1,6 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, relative } from "node:path";
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { afterEach, describe, expect, it } from "vitest";
@@ -18,6 +18,10 @@ import registerPiNotesExtension, {
   getNotesShowToolName
 } from "../src/index.js";
 
+interface RegisteredCommand {
+  readonly handler: (args: string, ctx: ExtensionContext) => Promise<void>;
+}
+
 interface RegisteredTool {
   readonly name: string;
   readonly parameters: unknown;
@@ -33,6 +37,15 @@ interface RegisteredTool {
 interface NotesToolDetails {
   readonly ok: boolean;
   readonly argv: readonly string[];
+  readonly truncation?: {
+    readonly truncated: boolean;
+    readonly outputLines: number;
+    readonly totalLines: number;
+    readonly outputBytes: number;
+    readonly totalBytes: number;
+  };
+  readonly fullOutputPath?: string;
+  readonly artifactRetentionMs?: number;
 }
 
 const roots: string[] = [];
@@ -45,16 +58,23 @@ async function createTempCwd(): Promise<string> {
   return join(root, "project");
 }
 
-function createExtensionApi(): { api: ExtensionAPI; tools: Map<string, RegisteredTool> } {
+function createExtensionApi(): {
+  api: ExtensionAPI;
+  commands: Map<string, RegisteredCommand>;
+  tools: Map<string, RegisteredTool>;
+} {
+  const commands = new Map<string, RegisteredCommand>();
   const tools = new Map<string, RegisteredTool>();
   const api = {
-    registerCommand: () => undefined,
+    registerCommand: (name: string, command: RegisteredCommand) => {
+      commands.set(name, command);
+    },
     registerTool: (tool: RegisteredTool) => {
       tools.set(tool.name, tool);
     }
   } as unknown as ExtensionAPI;
 
-  return { api, tools };
+  return { api, commands, tools };
 }
 
 function createContext(cwd: string): ExtensionContext {
@@ -256,7 +276,51 @@ describe("pi-notes tools", () => {
     expect(list.text).not.toContain("cancelled.md");
   });
 
-  it("truncates large tool output", async () => {
+  it("rejects headless direct commands with an observable CLI handoff", async () => {
+    const cwd = await createTempCwd();
+    const { api, commands } = createExtensionApi();
+    registerPiNotesExtension(api);
+    const command = commands.get("notes");
+    expect(command).toBeDefined();
+
+    const notifications: string[] = [];
+    const context = {
+      cwd,
+      mode: "print",
+      hasUI: false,
+      ui: {
+        notify: (message: string) => notifications.push(message)
+      }
+    } as unknown as ExtensionContext;
+
+    await expect(command?.handler("show daily --project", context)).rejects.toThrow(
+      "pi-notes show daily --project"
+    );
+    expect(notifications).toEqual([]);
+  });
+
+  it("emits one notification for direct commands in RPC mode", async () => {
+    const cwd = await createTempCwd();
+    const { api, commands } = createExtensionApi();
+    registerPiNotesExtension(api);
+    const notifications: string[] = [];
+    const context = {
+      cwd,
+      mode: "rpc",
+      hasUI: true,
+      ui: {
+        notify: (message: string) => notifications.push(message),
+        confirm: () => Promise.resolve(false),
+        editor: () => Promise.resolve(undefined)
+      }
+    } as unknown as ExtensionContext;
+
+    await commands.get("notes")?.handler("ls --project", context);
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toContain("No notes found");
+  });
+
+  it("truncates large tool output and retains the complete private artifact", async () => {
     const cwd = await createTempCwd();
     const { api, tools } = createExtensionApi();
     registerPiNotesExtension(api);
@@ -273,7 +337,23 @@ describe("pi-notes tools", () => {
 
     expect(shown.details.ok).toBe(true);
     expect(shown.text).toContain("[Output truncated:");
-    expect(shown.text).toContain("Use /notes or pi-notes CLI for full output.");
+    expect(shown.text).toContain("Full output saved to:");
     expect(shown.text).not.toContain("line-2099");
+    expect(shown.details.truncation).toMatchObject({ truncated: true, outputLines: 2_000 });
+    expect(shown.details.artifactRetentionMs).toBe(86_400_000);
+
+    const fullOutputPath = shown.details.fullOutputPath;
+    expect(fullOutputPath).toBeDefined();
+    if (fullOutputPath === undefined) {
+      throw new Error("Missing full output artifact path");
+    }
+
+    expect(relative(cwd, fullOutputPath).startsWith("..")).toBe(true);
+    expect(dirname(fullOutputPath).startsWith(tmpdir())).toBe(true);
+    expect(await readFile(fullOutputPath, "utf8")).toContain("line-2099");
+    if (process.platform !== "win32") {
+      expect((await stat(fullOutputPath)).mode & 0o777).toBe(0o600);
+    }
+    await rm(dirname(fullOutputPath), { recursive: true, force: true });
   });
 });
