@@ -1,7 +1,11 @@
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
+
+const execFileAsync = promisify(execFile);
 
 describe("package resource manifest", () => {
   it("declares package resources and current Pi peer imports", async () => {
@@ -18,13 +22,57 @@ describe("package resource manifest", () => {
     expect(packageJson.pi?.skills).toContain("./skills");
     expect(packageJson.files).toContain("extensions");
     expect(packageJson.files).toContain("skills");
-    expect(packageJson.peerDependencies?.["@earendil-works/pi-coding-agent"]).toBe(
-      packageJson.devDependencies?.["@earendil-works/pi-coding-agent"]
-    );
+    expect(packageJson.peerDependencies?.["@earendil-works/pi-coding-agent"]).toBe("*");
+    expect(packageJson.peerDependencies?.["typebox"]).toBe("*");
+    expect(packageJson.devDependencies?.["@earendil-works/pi-coding-agent"]).toBe("^0.84.1");
+    expect(packageJson.devDependencies?.["typebox"]).toBe("1.3.7");
     expect(packageJson.peerDependencies).not.toHaveProperty("@mariozechner/pi-coding-agent");
-    expect(packageJson.dependencies).toHaveProperty("typebox");
-    expect(packageJson.dependencies).not.toHaveProperty("@sinclair/typebox");
+    expect(packageJson.dependencies?.["typebox"]).toBeUndefined();
+    expect(packageJson.dependencies?.["@sinclair/typebox"]).toBeUndefined();
   });
+
+  it("keeps lockfile root metadata aligned with bundled-core peers", async () => {
+    const lock = JSON.parse(await readFile(join(process.cwd(), "package-lock.json"), "utf8")) as {
+      packages?: Record<string, {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+        peerDependencies?: Record<string, string>;
+      }>;
+    };
+    const root = lock.packages?.[""];
+
+    expect(root?.peerDependencies).toMatchObject({
+      "@earendil-works/pi-coding-agent": "*",
+      typebox: "*"
+    });
+    expect(root?.devDependencies).toMatchObject({
+      "@earendil-works/pi-coding-agent": "^0.84.1",
+      typebox: "1.3.7"
+    });
+    expect(root?.dependencies?.["typebox"]).toBeUndefined();
+  });
+
+  it("includes required extension and CLI resources in the dry-run tarball", async () => {
+    const { stdout } = await execFileAsync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
+      cwd: process.cwd(),
+      encoding: "utf8"
+    });
+    const result = JSON.parse(stdout) as
+      | Array<{ files: Array<{ path: string }> }>
+      | Record<string, { files: Array<{ path: string }> }>;
+    const packageInfo = Array.isArray(result) ? result[0] : Object.values(result)[0];
+    const paths = packageInfo?.files.map((file) => file.path) ?? [];
+
+    expect(paths).toContain("src/index.ts");
+    expect(paths).toContain("extensions/pi-notes/index.ts");
+    expect(paths).toContain("skills/pi-notes/SKILL.md");
+    expect(paths).toContain("README.md");
+    expect(paths).toContain("LICENSE");
+    expect(paths).toContain("dist/src/cli.js");
+    expect(paths).toContain("dist/src/core/storage.js");
+    expect(paths.some((path) => path.includes("node_modules/@earendil-works/pi-coding-agent"))).toBe(false);
+    expect(paths.some((path) => path.includes("node_modules/typebox"))).toBe(false);
+  }, 30_000);
 
   it("loads the package extension entry with runtime imports", async () => {
     const packageEntry = await import("../extensions/pi-notes/index.js");

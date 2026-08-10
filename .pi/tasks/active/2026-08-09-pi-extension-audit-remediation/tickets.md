@@ -22,7 +22,7 @@ Execute in order. A ticket is complete only when its notes/evidence are current,
   - Delivers: ST-004; complete output recovery and no silent headless commands.
   - Depends on: tkt-003 typed outcomes.
 
-- [ ] **tkt-005 — Align package, CI, and release contracts**
+- [x] **tkt-005 — Align package, CI, and release contracts**
   - Scope: `package.json`, lockfile, package tests, CI/publish workflows, release preflight tests.
   - Delivers: ST-005.
   - Depends on: stable imports from preceding tickets; may start after tkt-003 if needed.

@@ -73,18 +73,22 @@ npm publish --provenance
 
 Trigger options:
 
-- publish a GitHub Release (`release.published`)
-- run workflow manually (`workflow_dispatch`)
+- publish a GitHub Release whose tag is `vX.Y.Z` (`release.published`); or
+- run `workflow_dispatch` from the protected `main` branch and provide the existing `vX.Y.Z` tag.
 
-One-time npm setup required:
+The job checks out the selected tag and fails before installation or publication unless the tag (without `v`) exactly matches `package.json` `version`. Manual dispatches selected from any ref other than `main` are skipped.
 
-1. In npm package settings for `@tribalnerd/pi-notes`, add a **Trusted Publisher**.
-2. Provider: GitHub Actions
-3. Repository: `ChrisWinters/pi-notes`
-4. Workflow: `publish.yml`
-5. Environment (if used): leave unset unless you later add one in workflow.
+One-time external setup required:
 
-After trusted publishing is configured, the workflow publishes without an `NPM_TOKEN` secret and attaches provenance automatically.
+1. Protect `main` and restrict GitHub Actions workflow dispatch permissions to release maintainers.
+2. In npm package settings for `@tribalnerd/pi-notes`, add a **Trusted Publisher**.
+3. Provider: GitHub Actions
+4. Repository: `ChrisWinters/pi-notes`
+5. Workflow: `publish.yml`
+
+No protected GitHub environment name is evidenced in this repository, so the workflow intentionally does not invent one. If maintainers create a protected publishing environment, add its exact configured name to `jobs.publish.environment` and to the npm Trusted Publisher settings before using it.
+
+After trusted publishing and repository protections are configured, the workflow publishes without an `NPM_TOKEN` secret and attaches provenance automatically.
 
 ### Local fallback
 
