@@ -312,13 +312,9 @@ export class NotesStorage {
 
   public async appendToNote(input: AppendNoteInput): Promise<StoredNote> {
     this.assertNotAborted();
-    const initial = await this.readNote(input.name, input.selection);
+    const candidatePaths = this.getCandidateNotePaths(input.name, input.selection);
 
-    if (initial === null) {
-      throw new NotesError(`Cannot append. Note not found: ${input.name}`);
-    }
-
-    return this.withMutationQueue(initial.path, async () => {
+    return this.withMutationQueues(candidatePaths, async () => {
       const existing = await this.readNote(input.name, input.selection);
 
       if (existing === null) {
@@ -340,13 +336,9 @@ export class NotesStorage {
 
   public async deleteNote(name: string, selection: ScopeSelection): Promise<boolean> {
     this.assertNotAborted();
-    const initial = await this.readNote(name, selection);
+    const candidatePaths = this.getCandidateNotePaths(name, selection);
 
-    if (initial === null) {
-      return false;
-    }
-
-    return this.withMutationQueue(initial.path, async () => {
+    return this.withMutationQueues(candidatePaths, async () => {
       const existing = await this.readNote(name, selection);
 
       if (existing === null) {
@@ -371,6 +363,7 @@ export class NotesStorage {
       }
 
       await this.assertCanonicalDirectoryContainment(scope);
+      await this.assertSafeUninstallTree(directoryPath, scope);
       this.assertNotAborted();
       await rm(directoryPath, { recursive: true, force: true });
       return {
@@ -382,14 +375,13 @@ export class NotesStorage {
 
   public async moveNote(input: MoveNoteInput): Promise<MoveNoteResult> {
     this.assertNotAborted();
-    const initial = await this.readNote(input.name, input.selection);
-    if (initial === null) {
-      throw new NotesError(`Note not found: ${input.name}`);
-    }
+    const fileName = normalizeNoteName(input.name);
+    const candidatePaths = [
+      ...this.getCandidateNotePaths(input.name, input.selection),
+      this.getNotePath(input.destinationScope, fileName)
+    ];
 
-    const initialDestinationPath = this.getNotePath(input.destinationScope, initial.fileName);
-
-    return this.withMutationQueues([initial.path, initialDestinationPath], async () => {
+    return this.withMutationQueues(candidatePaths, async () => {
       const source = await this.readNote(input.name, input.selection);
       if (source === null) {
         throw new NotesError(`Note not found: ${input.name}`);
@@ -429,14 +421,13 @@ export class NotesStorage {
   public async renameNote(input: RenameNoteInput): Promise<RenameNoteResult> {
     this.assertNotAborted();
     const destinationFileName = normalizeNoteName(input.toName);
-    const initial = await this.readNote(input.fromName, input.selection);
-    if (initial === null) {
-      throw new NotesError(`Note not found: ${input.fromName}`);
-    }
+    const candidateScopes = this.getCandidateScopes(input.selection);
+    const candidatePaths = candidateScopes.flatMap((scope) => [
+      this.getNotePath(scope, normalizeNoteName(input.fromName)),
+      this.getNotePath(scope, destinationFileName)
+    ]);
 
-    const initialDestinationPath = this.getNotePath(initial.scope, destinationFileName);
-
-    return this.withMutationQueues([initial.path, initialDestinationPath], async () => {
+    return this.withMutationQueues(candidatePaths, async () => {
       const source = await this.readNote(input.fromName, input.selection);
       if (source === null) {
         throw new NotesError(`Note not found: ${input.fromName}`);
@@ -569,6 +560,16 @@ export class NotesStorage {
     };
   }
 
+  private getCandidateScopes(selection: ScopeSelection): readonly NotesScope[] {
+    const preference = resolveScopePreference(selection);
+    return preference === "default" ? ["project", "global"] : [preference];
+  }
+
+  private getCandidateNotePaths(name: string, selection: ScopeSelection): readonly string[] {
+    const fileName = normalizeNoteName(name);
+    return this.getCandidateScopes(selection).map((scope) => this.getNotePath(scope, fileName));
+  }
+
   private async withMutationQueue<T>(key: string, operation: () => Promise<T>): Promise<T> {
     return this.withMutationQueues([key], operation);
   }
@@ -694,6 +695,23 @@ export class NotesStorage {
     ]);
     if (!isContainedPath(canonicalConfig, canonicalNotes)) {
       throw new NotesError(`Unsafe ${scope} notes directory escapes its config directory: ${this.getNotesDirectory(scope)}`);
+    }
+  }
+
+  private async assertSafeUninstallTree(directory: string, scope: NotesScope): Promise<void> {
+    const entries = await readdir(directory, { withFileTypes: true });
+    for (const entry of entries) {
+      this.assertNotAborted();
+      const path = join(directory, entry.name);
+      const stats = await lstat(path);
+      if (stats.isSymbolicLink()) {
+        throw new NotesError(`Unsafe ${scope} notes entry during uninstall: ${path}. Remove the symlink.`);
+      }
+      if (stats.isDirectory()) {
+        await this.assertSafeUninstallTree(path, scope);
+      } else if (!stats.isFile()) {
+        throw new NotesError(`Unsafe ${scope} notes entry during uninstall: ${path}. Remove the non-file entry.`);
+      }
     }
   }
 

@@ -32,7 +32,7 @@ Execute in order. A ticket is complete only when its notes/evidence are current,
   - Delivers: ST-006 and final cross-ticket reconciliation.
   - Depends on: tkt-001 through tkt-005.
 
-- [ ] **tkt-007 — Stabilize queued identities and strict uninstall scanning**
+- [x] **tkt-007 — Stabilize queued identities and strict uninstall scanning**
   - Scope: `src/core/storage.ts`, mutation hooks/coordinator tests, storage security tests.
   - Delivers: ST-007 and repairs GAP-002/GAP-003.
   - Depends on: tkt-001/tkt-002 foundations.

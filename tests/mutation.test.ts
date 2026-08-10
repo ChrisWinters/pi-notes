@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -65,6 +65,45 @@ describe("mutation coordination", () => {
     expect(windows.every((window) => window.active === false)).toBe(true);
     const note = await storage.readNote("coordinated", { forceProject: true, forceGlobal: false });
     expect(note?.markdown).toContain("inside-window");
+  });
+
+  it("locks both default-scope candidates before selecting a winner", async () => {
+    const root = await createRoot();
+    const cwd = join(root, "project");
+    const globalNotesDir = join(root, "global", ".pi", "notes");
+    const setupStorage = new NotesStorage({ cwd, globalNotesDir });
+    await setupStorage.createNote({ name: "winner", scope: "global", title: "global" });
+    await setupStorage.ensureScopeDirectory("project");
+
+    let acquired: readonly string[] = [];
+    const coordinator = {
+      async withMutations<T>(paths: readonly string[], operation: () => Promise<T>): Promise<T> {
+        acquired = [...paths];
+        await writeFile(
+          setupStorage.getNotePath("project", "winner.md"),
+          "---\ntitle: project\nupdated: 2026-08-09T00:00:00.000Z\n---\n\n## project\n",
+          "utf8"
+        );
+        return operation();
+      }
+    };
+    const storage = new NotesStorage({ cwd, globalNotesDir, mutationCoordinator: coordinator });
+
+    const updated = await storage.appendToNote({
+      name: "winner",
+      text: "selected-after-acquisition",
+      selection: { forceProject: false, forceGlobal: false },
+      updatedIso: "2026-08-09T00:00:01.000Z"
+    });
+
+    expect(new Set(acquired)).toEqual(new Set([
+      storage.getNotePath("project", "winner.md"),
+      storage.getNotePath("global", "winner.md")
+    ]));
+    expect(updated.scope).toBe("project");
+    expect(updated.markdown).toContain("selected-after-acquisition");
+    const global = await setupStorage.readNote("winner", { forceProject: false, forceGlobal: true });
+    expect(global?.markdown).not.toContain("selected-after-acquisition");
   });
 
   it("does not mutate when aborted while waiting for the shared queue", async () => {

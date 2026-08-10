@@ -498,6 +498,20 @@ describe("NotesStorage", () => {
     });
   });
 
+  it.each(["project", "global"] as const)("rejects internal symlink entries before uninstalling %s scope", async (scope) => {
+    await withStorage(async (storage) => {
+      const note = await storage.createNote({ name: "preserved", scope });
+      const externalPath = join(dirname(storage.getNotesDirectory(scope)), `external-uninstall-${scope}.md`);
+      const original = "external uninstall target";
+      await writeFile(externalPath, original, "utf8");
+      await symlink(externalPath, join(storage.getNotesDirectory(scope), "linked-entry"));
+
+      await expect(storage.removeScopeDirectory(scope)).rejects.toThrow("Remove the symlink");
+      expect(await readFile(externalPath, "utf8")).toBe(original);
+      expect(await readFile(note.path, "utf8")).toBe(note.markdown);
+    });
+  });
+
   it("rejects symlink entries during setup and uninstall", async () => {
     await withStorage(async (storage) => {
       await storage.ensureScopeDirectory("global");
