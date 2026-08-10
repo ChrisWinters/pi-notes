@@ -1,5 +1,5 @@
 import { renderScopeLabel } from "../../ui/render.js";
-import { requireHasUi } from "../shared.js";
+import { resolveInteractiveNote } from "../shared.js";
 import { notifyCancelled, notifyFailure } from "../context.js";
 import type { NotesHandler } from "./types.js";
 
@@ -10,13 +10,8 @@ export const handleRm: NotesHandler = async ({ args, storage, scopeSelection, ct
     return;
   }
 
-  const target = await storage.readNote(name, scopeSelection);
+  const target = await resolveInteractiveNote(name, storage, scopeSelection, ctx);
   if (target === null) {
-    notifyFailure(ctx, `Note not found: ${name}`, "warning");
-    return;
-  }
-
-  if (!requireHasUi(ctx)) {
     return;
   }
 

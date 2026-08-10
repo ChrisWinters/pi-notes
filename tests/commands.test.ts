@@ -146,10 +146,27 @@ describe("handleNotesCommand", () => {
     await handleNotesCommand("new remove-me", interactiveCtx as unknown as ExtensionCommandContext);
 
     const nonInteractiveCtx = createContext(cwd, false, true);
-    await handleNotesCommand("rm remove-me", nonInteractiveCtx as unknown as ExtensionCommandContext);
+    const outcome = await handleNotesCommand("rm remove-me", nonInteractiveCtx as unknown as ExtensionCommandContext);
 
-    const messages = nonInteractiveCtx.ui.notify.mock.calls.map((call) => call[0] as string);
-    expect(messages.some((message) => message.includes("requires an interactive UI"))).toBe(true);
+    expect(outcome.status).toBe("failure");
+    expect(nonInteractiveCtx.ui.notify).toHaveBeenCalledWith(
+      "This subcommand requires an interactive UI session.",
+      "error"
+    );
+    expect(nonInteractiveCtx.ui.confirm).not.toHaveBeenCalled();
+    expect(nonInteractiveCtx.ui.editor).not.toHaveBeenCalled();
+  });
+
+  it("returns a warning without confirmation when the rm note is missing", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+
+    const outcome = await handleNotesCommand("rm missing-note", ctx as unknown as ExtensionCommandContext);
+
+    expect(outcome.status).toBe("failure");
+    expect(ctx.ui.notify).toHaveBeenCalledWith("Note not found: missing-note", "warning");
+    expect(ctx.ui.confirm).not.toHaveBeenCalled();
+    expect(ctx.ui.editor).not.toHaveBeenCalled();
   });
 
   it("deletes note after confirmation", async () => {
@@ -303,10 +320,15 @@ describe("handleNotesCommand", () => {
     const cwd = await createTempCwd();
     const ctx = createContext(cwd, true, true);
 
-    await handleNotesCommand("rewrite missing-note apply this", ctx as unknown as ExtensionCommandContext);
+    const outcome = await handleNotesCommand(
+      "rewrite missing-note apply this",
+      ctx as unknown as ExtensionCommandContext
+    );
 
-    const messages = ctx.ui.notify.mock.calls.map((call) => call[0] as string);
-    expect(messages.some((message) => message.includes("Note not found: missing-note"))).toBe(true);
+    expect(outcome.status).toBe("failure");
+    expect(ctx.ui.notify).toHaveBeenCalledWith("Note not found: missing-note", "warning");
+    expect(ctx.ui.editor).not.toHaveBeenCalled();
+    expect(ctx.ui.confirm).not.toHaveBeenCalled();
   });
 
   it("shows usage for explicit help aliases", async () => {

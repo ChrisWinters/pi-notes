@@ -1,4 +1,4 @@
-import type { NotesScope, ScopeSelection } from "../core/storage.js";
+import type { NotesScope, NotesStorage, ScopeSelection, StoredNote } from "../core/storage.js";
 import { notifyFailure, type NotesCommandContext } from "./context.js";
 import { resolveScopePreference } from "../core/storage.js";
 
@@ -41,6 +41,21 @@ export function requireHasUi(ctx: NotesCommandContext): boolean {
 
   notifyFailure(ctx, "This subcommand requires an interactive UI session.");
   return false;
+}
+
+export async function resolveInteractiveNote(
+  name: string,
+  storage: NotesStorage,
+  selection: ScopeSelection,
+  ctx: NotesCommandContext
+): Promise<StoredNote | null> {
+  const note = await storage.readNote(name, selection);
+  if (note === null) {
+    notifyFailure(ctx, `Note not found: ${name}`, "warning");
+    return null;
+  }
+
+  return requireHasUi(ctx) ? note : null;
 }
 
 export function renderSetupStarterNote(now: string): string {

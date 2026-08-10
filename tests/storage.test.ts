@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -52,6 +52,17 @@ describe("NotesStorage", () => {
       expect(loaded).not.toBeNull();
       expect(loaded?.scope).toBe("project");
       expect(loaded?.fileName).toBe("project-ideas.md");
+    });
+  });
+
+  it("creates notes with owner-only mode and preserves the exact conflict error", async () => {
+    await withStorage(async (storage) => {
+      const created = await storage.createNote({ name: "private", scope: "project" });
+
+      expect((await stat(created.path)).mode & 0o777).toBe(0o600);
+      await expect(
+        storage.createNote({ name: "private", scope: "project" })
+      ).rejects.toThrowError("Note already exists: private.md");
     });
   });
 
@@ -230,6 +241,7 @@ describe("NotesStorage", () => {
       expect(moved.source.scope).toBe("project");
       expect(moved.destination.scope).toBe("global");
       expect(moved.destination.markdown).toContain("line-1");
+      expect((await stat(moved.destination.path)).mode & 0o777).toBe(0o600);
 
       const projectRead = await storage.readNote("handoff", { forceProject: true, forceGlobal: false });
       const globalRead = await storage.readNote("handoff", { forceProject: false, forceGlobal: true });
@@ -250,7 +262,7 @@ describe("NotesStorage", () => {
           destinationScope: "global",
           overwrite: false
         })
-      ).rejects.toThrowError("Destination already has note");
+      ).rejects.toThrowError("Destination already has note: dupe.md. Re-run with --overwrite.");
 
       const source = await storage.readNote("dupe", { forceProject: true, forceGlobal: false });
       const destination = await storage.readNote("dupe", { forceProject: false, forceGlobal: true });
@@ -351,7 +363,7 @@ describe("NotesStorage", () => {
           selection: { forceProject: true, forceGlobal: false },
           overwrite: false
         })
-      ).rejects.toThrowError("Destination already has note");
+      ).rejects.toThrowError("Destination already has note: beta.md. Re-run with --overwrite.");
 
       const source = await storage.readNote("alpha", { forceProject: true, forceGlobal: false });
       const destination = await storage.readNote("beta", { forceProject: true, forceGlobal: false });

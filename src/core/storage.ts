@@ -253,19 +253,7 @@ export class NotesStorage {
       const markdown = createEmptyNoteMarkdown(title, nowIso);
       this.assertNotAborted();
 
-      let handle: FileHandle | undefined;
-      try {
-        handle = await open(targetPath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
-        await handle.writeFile(markdown, "utf8");
-      } catch (error: unknown) {
-        if (isAlreadyExists(error)) {
-          throw new NotesError(`Note already exists: ${fileName}`);
-        }
-
-        throw error;
-      } finally {
-        await handle?.close();
-      }
+      await this.writeFileExclusive(targetPath, markdown, `Note already exists: ${fileName}`);
 
       return {
         name: fileName.slice(0, -3),
@@ -524,13 +512,21 @@ export class NotesStorage {
       return;
     }
 
+    await this.writeFileExclusive(
+      destinationPath,
+      markdown,
+      `Destination already has note: ${destinationFileName}. Re-run with --overwrite.`
+    );
+  }
+
+  private async writeFileExclusive(path: string, content: string, conflictMessage: string): Promise<void> {
     let handle: FileHandle | undefined;
     try {
-      handle = await open(destinationPath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
-      await handle.writeFile(markdown, "utf8");
+      handle = await open(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+      await handle.writeFile(content, "utf8");
     } catch (error: unknown) {
       if (isAlreadyExists(error)) {
-        throw new NotesError(`Destination already has note: ${destinationFileName}. Re-run with --overwrite.`);
+        throw new NotesError(conflictMessage);
       }
 
       throw error;

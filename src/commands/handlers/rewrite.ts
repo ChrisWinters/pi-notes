@@ -1,6 +1,6 @@
 import { renderRewritePreview, renderScopeLabel } from "../../ui/render.js";
 import { notifyCancelled, notifyFailure } from "../context.js";
-import { nowIso, requireHasUi } from "../shared.js";
+import { nowIso, resolveInteractiveNote } from "../shared.js";
 import type { NotesHandler } from "./types.js";
 
 export const handleRewrite: NotesHandler = async ({ args, storage, scopeSelection, ctx }) => {
@@ -16,13 +16,8 @@ export const handleRewrite: NotesHandler = async ({ args, storage, scopeSelectio
     return;
   }
 
-  const target = await storage.readNote(name, scopeSelection);
+  const target = await resolveInteractiveNote(name, storage, scopeSelection, ctx);
   if (target === null) {
-    notifyFailure(ctx, `Note not found: ${name}`, "warning");
-    return;
-  }
-
-  if (!requireHasUi(ctx)) {
     return;
   }
 

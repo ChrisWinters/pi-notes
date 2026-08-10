@@ -28,7 +28,7 @@ npx fallow dead-code --boundary-violations --format json --quiet 2>/dev/null || 
 npm run lint
 ```
 
-## [ ] tkt-002 — Consolidate audited command and storage clones
+## [x] tkt-002 — Consolidate audited command and storage clones
 
 ### Dependencies
 
