@@ -1,0 +1,87 @@
+{
+  "entry": [
+    "extensions/pi-notes/index.ts",
+    "src/index.ts",
+    "src/cli.ts"
+  ],
+  "rules": {
+    "security-sink": "warn"
+  },
+  "boundaries": {
+    "zones": [
+      {
+        "name": "entry",
+        "patterns": [
+          "extensions/**/*.ts",
+          "src/index.ts",
+          "src/cli.ts"
+        ]
+      },
+      {
+        "name": "commands",
+        "patterns": [
+          "src/commands/**/*.ts"
+        ]
+      },
+      {
+        "name": "core",
+        "patterns": [
+          "src/core/**/*.ts"
+        ]
+      },
+      {
+        "name": "ui",
+        "patterns": [
+          "src/ui/**/*.ts"
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "from": "entry",
+        "allow": [
+          "entry",
+          "commands"
+        ]
+      },
+      {
+        "from": "commands",
+        "allow": [
+          "commands",
+          "core",
+          "ui"
+        ]
+      },
+      {
+        "from": "core",
+        "allow": [
+          "core"
+        ]
+      },
+      {
+        "from": "ui",
+        "allow": [
+          "ui"
+        ],
+        "allowTypeOnly": [
+          "core"
+        ]
+      }
+    ],
+    "coverage": {
+      "requireAllFiles": true,
+      "allowUnmatched": [
+        "tests/**/*.ts",
+        "eslint.config.mjs"
+      ]
+    }
+  },
+  "security": {
+    "categories": {
+      "include": [
+        "path-traversal",
+        "resource-amplification"
+      ]
+    }
+  }
+}
