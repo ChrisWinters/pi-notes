@@ -15,7 +15,7 @@ The follow-up Fallow audit found two error-level boundary violations caused by s
 
 1. Fallow boundary zones must model the package shim, Pi extension adapter, CLI adapter, commands, core, and UI according to implemented architecture.
 2. Boundary scans must report zero unexplained violations and zero unmatched source files.
-3. Rewrite/remove interactive preflight must use one typed command-layer path while keeping editor and destructive confirmation logic explicit.
+3. Rewrite/remove interactive preflight must use one typed command-layer path while keeping editor and destructive confirmation logic explicit, unless a concrete extraction is documented and reviewed as less auditable than the small existing duplication.
 4. Create and non-overwrite destination writes must use one private exclusive no-follow primitive while preserving caller-specific conflict errors and handle cleanup.
 5. The repository must provide repeatable measured V8 coverage compatible with Vitest 4 and Fallow.
 6. Exact measured branch gaps must be tested before any complexity refactor is attempted.

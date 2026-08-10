@@ -27,7 +27,7 @@ Fallow reported no unused exports/dependencies, cycles, feature flags, configure
 ## 2. Goals
 
 - Encode a narrow, truthful architecture policy with zero unexplained boundary/coverage findings.
-- Consolidate audited command preflight without moving editor or destructive confirmation ownership out of handlers.
+- Consolidate audited command preflight without moving editor or destructive confirmation ownership out of handlers, or retain it only with explicit evidence that extraction reduces auditability.
 - Consolidate exclusive non-overwrite writes without changing flags, mode, errors, queue windows, or source-removal ordering.
 - Add repeatable measured V8 coverage compatible with Vitest 4 and Fallow.
 - Close exact measured branch gaps before considering adapter refactors.
@@ -135,7 +135,7 @@ Required output:
 
 ## 6.2 Shared interactive preflight
 
-A command-layer helper must own the common preflight. Its exact name and module are implementation-defined, but it must:
+The executor must first implement or concretely evaluate the smallest command-layer helper for the common preflight. When retained, its exact name and module are implementation-defined, and it must:
 
 1. receive note name, storage, scope selection, and command context;
 2. call `storage.readNote(name, scopeSelection)`;
@@ -146,6 +146,8 @@ A command-layer helper must own the common preflight. Its exact name and module 
 `handleRewrite` and `handleRm` must call the helper after their own argument validation. They must keep their editor/confirmation/cancellation/mutation logic local. The helper must not accept an opaque operation callback or perform a destructive action.
 
 Tests must prove missing-note and no-UI behavior and preserve exact visible messages/outcome status. Existing confirmation counts and cancellation behavior must remain passing.
+
+The existing duplicated preflight may be retained only if the concrete extraction makes destructive control flow or outcome typing less auditable. That fallback must be explained in `tkt-002/notes.md`, supported by source/test and duplicate-trace evidence, use no suppression, and remain an explicit validator review item.
 
 ## 6.3 Shared exclusive-write primitive
 
@@ -337,7 +339,7 @@ If an original duplicate fingerprint no longer resolves, evidence must record th
 - [ ] All four tickets are checked complete in `tickets.md`.
 - [ ] Every ticket has current `notes.md` and `evidence.md`.
 - [ ] Fallow boundary and coverage violations are zero without suppressing original imports.
-- [ ] Shared interactive preflight preserves messages, outcomes, and handler-local operation flow.
+- [ ] Interactive preflight is consolidated, or a trace-backed no-change disposition is explicitly reviewed; messages, outcomes, and handler-local operation flow are preserved.
 - [ ] Shared exclusive-write primitive preserves all filesystem and error invariants.
 - [ ] Original duplicate fingerprints are absent or explicitly reviewed with evidence.
 - [ ] `test:coverage` produces ignored Fallow-readable measured coverage.

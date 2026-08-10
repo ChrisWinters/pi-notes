@@ -36,8 +36,8 @@ Requires `tkt-001` complete.
 
 ### Scope
 
-- Add a typed command helper for lookup, missing-note warning, and interactive-UI gating.
-- Use it from rewrite and remove while retaining operation-specific editor/confirmation flow.
+- Implement or concretely evaluate a typed command helper for lookup, missing-note warning, and interactive-UI gating.
+- Prefer using it from rewrite and remove while retaining operation-specific editor/confirmation flow; retain the original flow only with source/test/trace evidence that extraction is less auditable.
 - Add a private storage primitive for non-overwrite exclusive no-follow writes.
 - Use it from create and non-overwrite destination writing with caller-specific conflict messages.
 - Add focused public-behavior tests where needed.

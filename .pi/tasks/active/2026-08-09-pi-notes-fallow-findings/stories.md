@@ -17,7 +17,7 @@ As a reviewer of destructive/editor commands, I want rewrite and remove to share
 
 Acceptance criteria:
 
-- One command-layer helper owns note lookup, missing-note warning, and UI requirement.
+- One command-layer helper owns note lookup, missing-note warning, and UI requirement, or a concrete trace-backed experiment documents why retaining the small flow is more auditable.
 - Rewrite still owns editor, preview, apply confirmation, and cancellation.
 - Remove still owns destructive confirmation, deletion, and cancellation.
 - Existing visible messages and outcome statuses remain stable.
