@@ -3,8 +3,8 @@
   "active": [
     {
       "slug": "2026-08-09-pi-extension-audit-remediation",
-      "state": "built",
-      "manager": "human",
+      "state": "repair",
+      "manager": "agent",
       "createdOrder": 1
     }
   ],
