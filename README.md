@@ -1,6 +1,6 @@
 # pi-notes
 
-A human-first notes extension for [Pi](https://github.com/earendil-works/pi-mono), built to keep quick notes organized, searchable, and safe directly inside your Pi workflow.
+A human-first notes extension built to keep quick notes organized, searchable, and safe directly inside your Pi workflow.
 
 ## Summary
 
