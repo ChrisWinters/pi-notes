@@ -1,6 +1,21 @@
 # Spec check: Pi extension audit remediation
 
 Result: PASS
+
+## Repair-cycle coverage check
+
+Result: PASS
+
+Validator findings in root `gaps.md` are fully represented as repair execution work:
+
+- GAP-002/GAP-003 → spec section 12.1 stable identities/strict uninstall, PRD 11-12, ST-007, tkt-007.
+- GAP-001 → spec section 12.1 bounded result/artifact expiry, PRD 13, ST-008, tkt-008.
+- GAP-004 → spec section 12.1 missing boundary evidence, PRD 14, ST-009, tkt-009.
+- Repair ordering, focused evidence, complete gates, docs residuals, and independent revalidation are explicit in `implementation.md` and the revised spec.
+- `open-questions.md` remains clear; no human/product decision is required.
+- Ticket folders tkt-007 through tkt-009 contain required notes/evidence placeholders.
+
+Root `gaps.md` remains validator-owned unresolved input until rebuilt work is independently revalidated; its presence does not block execution of the tickets that repair every finding.
 Date: 2026-08-09
 
 ## Reviewed artifacts
