@@ -8,6 +8,7 @@ export interface NotesCommandUi {
 
 export interface NotesCommandContext {
   readonly cwd: string;
+  readonly configDirName?: string;
   readonly hasUI: boolean;
   readonly ui: NotesCommandUi;
 }

@@ -1,5 +1,5 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 
 import { describe, expect, it } from "vitest";
@@ -31,6 +31,18 @@ describe("NotesStorage", () => {
       await rm(root, { recursive: true, force: true });
     }
   }
+
+  it("supports a validated custom config directory name", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pi-notes-config-test-"));
+    try {
+      const storage = new NotesStorage({ cwd: root, configDirName: ".custom-pi" });
+      const created = await storage.createNote({ name: "custom", scope: "project" });
+      expect(created.path).toBe(join(root, ".custom-pi", "notes", "custom.md"));
+      expect(() => new NotesStorage({ cwd: root, configDirName: "../escape" })).toThrow(NotesError);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 
   it("creates and reads a project note by default", async () => {
     await withStorage(async (storage) => {
@@ -411,6 +423,98 @@ describe("NotesStorage", () => {
 
       const notes = await storage.listNotes({ forceProject: true, forceGlobal: false });
       expect(notes).toHaveLength(0);
+    });
+  });
+
+  it.each(["project", "global"] as const)("rejects a symlinked %s note without reading or mutating its target", async (scope) => {
+    await withStorage(async (storage) => {
+      await storage.ensureScopeDirectory(scope);
+      const externalPath = join(dirname(storage.getNotesDirectory(scope)), `external-${scope}.md`);
+      const original = "---\ntitle: external\nupdated: 2026-08-09T00:00:00.000Z\n---\nsecret\n";
+      await writeFile(externalPath, original, "utf8");
+      await symlink(externalPath, storage.getNotePath(scope, "linked.md"));
+      const selection = { forceProject: scope === "project", forceGlobal: scope === "global" };
+
+      await expect(storage.readNote("linked", selection)).rejects.toThrow("Remove the symlink");
+      await expect(storage.appendToNote({
+        name: "linked",
+        text: "MUTATED",
+        selection,
+        updatedIso: "2026-08-09T01:00:00.000Z"
+      })).rejects.toThrow("Remove the symlink");
+      expect(await readFile(externalPath, "utf8")).toBe(original);
+    });
+  });
+
+  it("rejects symlinked config and notes directories", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pi-notes-dir-link-test-"));
+    try {
+      const cwd = join(root, "project");
+      const external = join(root, "external");
+      await mkdir(cwd, { recursive: true });
+      await mkdir(external, { recursive: true });
+      await symlink(external, join(cwd, ".pi"));
+      const configLinked = new NotesStorage({ cwd });
+      await expect(configLinked.createNote({ name: "blocked", scope: "project" })).rejects.toThrow("Remove the symlink");
+
+      await rm(join(cwd, ".pi"));
+      await mkdir(join(cwd, ".pi"));
+      await symlink(external, join(cwd, ".pi", "notes"));
+      const notesLinked = new NotesStorage({ cwd });
+      await expect(notesLinked.listNotes({ forceProject: true, forceGlobal: false })).rejects.toThrow("Remove the symlink");
+      expect(await readFile(join(external, "blocked.md"), "utf8").catch(() => null)).toBeNull();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects symlink destinations for overwrite move and rename", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "move-source", scope: "project", title: "Move Source" });
+      await storage.createNote({ name: "rename-source", scope: "project", title: "Rename Source" });
+      await storage.ensureScopeDirectory("global");
+      const externalPath = join(dirname(storage.getNotesDirectory("global")), "external-destination.md");
+      const original = "---\ntitle: external\nupdated: 2026-08-09T00:00:00.000Z\n---\nunchanged\n";
+      await writeFile(externalPath, original, "utf8");
+      await symlink(externalPath, storage.getNotePath("global", "move-source.md"));
+      await symlink(externalPath, storage.getNotePath("project", "rename-target.md"));
+
+      await expect(storage.moveNote({
+        name: "move-source",
+        selection: { forceProject: true, forceGlobal: false },
+        destinationScope: "global",
+        overwrite: true
+      })).rejects.toThrow("Remove the symlink");
+      await expect(storage.renameNote({
+        fromName: "rename-source",
+        toName: "rename-target",
+        selection: { forceProject: true, forceGlobal: false },
+        overwrite: true
+      })).rejects.toThrow("Remove the symlink");
+
+      expect(await readFile(externalPath, "utf8")).toBe(original);
+      expect(await storage.readNote("move-source", { forceProject: true, forceGlobal: false })).not.toBeNull();
+      expect(await storage.readNote("rename-source", { forceProject: true, forceGlobal: false })).not.toBeNull();
+    });
+  });
+
+  it("rejects symlink entries during setup and uninstall", async () => {
+    await withStorage(async (storage) => {
+      await storage.ensureScopeDirectory("global");
+      const externalFile = join(dirname(storage.getNotesDirectory("global")), "starter-target.md");
+      const original = "external starter";
+      await writeFile(externalFile, original, "utf8");
+      await symlink(externalFile, storage.getNotePath("global", "note.md"));
+      await expect(storage.setupNotes({ starterGlobalMarkdown: "replacement" })).rejects.toThrow("Remove the symlink");
+      expect(await readFile(externalFile, "utf8")).toBe(original);
+
+      const projectNotes = storage.getNotesDirectory("project");
+      const externalDirectory = join(dirname(projectNotes), "external-directory");
+      await rm(projectNotes, { recursive: true, force: true });
+      await mkdir(externalDirectory);
+      await symlink(externalDirectory, projectNotes);
+      await expect(storage.removeScopeDirectory("project")).rejects.toThrow("Remove the symlink");
+      expect(await readFile(externalFile, "utf8")).toBe(original);
     });
   });
 });

@@ -1,6 +1,8 @@
-import { access, mkdir, open, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, mkdir, open, readdir, realpath, rm } from "node:fs/promises";
+import type { Stats } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
 
 import { NotesError } from "./errors.js";
@@ -16,6 +18,7 @@ export interface ScopeSelection {
 
 export interface NotesStorageOptions {
   readonly cwd: string;
+  readonly configDirName?: string;
   readonly globalNotesDir?: string;
 }
 
@@ -94,6 +97,24 @@ function isAlreadyExists(error: unknown): boolean {
   return error instanceof Error && "code" in error && error.code === "EEXIST";
 }
 
+function assertSafeConfigDirName(configDirName: string): void {
+  if (
+    configDirName.length === 0
+    || configDirName === "."
+    || configDirName === ".."
+    || isAbsolute(configDirName)
+    || configDirName.includes("/")
+    || configDirName.includes("\\")
+  ) {
+    throw new NotesError(`Invalid notes config directory name: ${configDirName}`);
+  }
+}
+
+function isContainedPath(root: string, candidate: string): boolean {
+  const pathFromRoot = relative(root, candidate);
+  return pathFromRoot === "" || (!pathFromRoot.startsWith(`..${sep}`) && pathFromRoot !== ".." && !isAbsolute(pathFromRoot));
+}
+
 export function resolveScopePreference(selection: ScopeSelection): NotesScope | "default" {
   if (selection.forceProject && selection.forceGlobal) {
     throw new NotesError("Scope flags conflict: choose either --project or --global.");
@@ -114,16 +135,19 @@ export class NotesStorage {
   private static readonly mutationQueues = new Map<string, Promise<void>>();
 
   private readonly cwd: string;
+  private readonly configDirName: string;
   private readonly globalNotesDir: string;
 
   public constructor(options: NotesStorageOptions) {
-    this.cwd = options.cwd;
-    this.globalNotesDir = options.globalNotesDir ?? join(homedir(), ".pi", "notes");
+    this.cwd = resolve(options.cwd);
+    this.configDirName = options.configDirName ?? ".pi";
+    assertSafeConfigDirName(this.configDirName);
+    this.globalNotesDir = resolve(options.globalNotesDir ?? join(homedir(), this.configDirName, "notes"));
   }
 
   public getNotesDirectory(scope: NotesScope): string {
     if (scope === "project") {
-      return join(this.cwd, ".pi", "notes");
+      return join(this.cwd, this.configDirName, "notes");
     }
 
     return this.globalNotesDir;
@@ -136,7 +160,14 @@ export class NotesStorage {
 
   public async ensureScopeDirectory(scope: NotesScope): Promise<string> {
     const directory = this.getNotesDirectory(scope);
-    await mkdir(directory, { recursive: true });
+    const configDirectory = dirname(directory);
+
+    // The caller owns the base path (project root or home override). Only the
+    // config and notes components are pi-notes trust boundaries.
+    await mkdir(dirname(configDirectory), { recursive: true });
+    await this.ensureRegularDirectory(configDirectory, scope);
+    await this.ensureRegularDirectory(directory, scope);
+    await this.assertCanonicalDirectoryContainment(scope);
     return directory;
   }
 
@@ -146,22 +177,23 @@ export class NotesStorage {
     const starterFileName = normalizeNoteName("note");
     const starterGlobalNotePath = this.getNotePath("global", starterFileName);
 
-    const createdProjectDirectory = !(await this.pathExists(projectDirectoryPath));
-    await mkdir(projectDirectoryPath, { recursive: true });
+    const createdProjectDirectory = !(await this.scopeDirectoryExists("project"));
+    await this.ensureScopeDirectory("project");
 
-    const createdGlobalDirectory = !(await this.pathExists(globalDirectoryPath));
-    await mkdir(globalDirectoryPath, { recursive: true });
+    const createdGlobalDirectory = !(await this.scopeDirectoryExists("global"));
+    await this.ensureScopeDirectory("global");
 
     let createdStarterGlobalNote = false;
     let handle: FileHandle | undefined;
     try {
-      handle = await open(starterGlobalNotePath, "wx");
+      handle = await open(starterGlobalNotePath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
       await handle.writeFile(input.starterGlobalMarkdown, "utf8");
       createdStarterGlobalNote = true;
     } catch (error: unknown) {
       if (!isAlreadyExists(error)) {
         throw error;
       }
+      await this.assertRegularNoteEntry("global", starterFileName);
     } finally {
       await handle?.close();
     }
@@ -178,17 +210,10 @@ export class NotesStorage {
 
   public async noteExists(scope: NotesScope, fileName: string): Promise<boolean> {
     assertSafeNoteFileName(fileName);
-
-    try {
-      await access(this.getNotePath(scope, fileName));
-      return true;
-    } catch (error: unknown) {
-      if (isNotFound(error)) {
-        return false;
-      }
-
-      throw error;
+    if (!(await this.scopeDirectoryExists(scope))) {
+      return false;
     }
+    return (await this.assertRegularNoteEntry(scope, fileName)) !== null;
   }
 
   public async createNote(input: CreateNoteInput): Promise<StoredNote> {
@@ -197,6 +222,10 @@ export class NotesStorage {
 
     return this.withMutationQueue(targetPath, async () => {
       await this.ensureScopeDirectory(input.scope);
+      const existing = await this.assertRegularNoteEntry(input.scope, fileName);
+      if (existing !== null) {
+        throw new NotesError(`Note already exists: ${fileName}`);
+      }
 
       const nowIso = new Date().toISOString();
       const title = input.title?.trim().length ? input.title : input.name.trim();
@@ -204,7 +233,7 @@ export class NotesStorage {
 
       let handle: FileHandle | undefined;
       try {
-        handle = await open(targetPath, "wx");
+        handle = await open(targetPath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
         await handle.writeFile(markdown, "utf8");
       } catch (error: unknown) {
         if (isAlreadyExists(error)) {
@@ -304,13 +333,14 @@ export class NotesStorage {
   public async removeScopeDirectory(scope: NotesScope): Promise<{ path: string; removed: boolean }> {
     const directoryPath = this.getNotesDirectory(scope);
 
-    if (!(await this.pathExists(directoryPath))) {
+    if (!(await this.scopeDirectoryExists(scope))) {
       return {
         path: directoryPath,
         removed: false
       };
     }
 
+    await this.assertCanonicalDirectoryContainment(scope);
     await rm(directoryPath, { recursive: true, force: true });
     return {
       path: directoryPath,
@@ -451,13 +481,18 @@ export class NotesStorage {
     destinationFileName: string
   ): Promise<void> {
     if (overwrite) {
-      await writeFile(destinationPath, markdown, "utf8");
+      const destinationFileNameFromPath = destinationPath.slice(destinationPath.lastIndexOf(sep) + 1);
+      const scope: NotesScope = dirname(destinationPath) === this.getNotesDirectory("project")
+        ? "project"
+        : "global";
+      await this.assertRegularNoteEntry(scope, destinationFileNameFromPath);
+      await this.writeFileNoFollow(destinationPath, markdown, false);
       return;
     }
 
     let handle: FileHandle | undefined;
     try {
-      handle = await open(destinationPath, "wx");
+      handle = await open(destinationPath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
       await handle.writeFile(markdown, "utf8");
     } catch (error: unknown) {
       if (isAlreadyExists(error)) {
@@ -477,7 +512,8 @@ export class NotesStorage {
     await this.ensureScopeDirectory(input.scope);
 
     const updatedMarkdown = withUpdatedTimestamp(input.markdown, input.updatedIso);
-    await writeFile(targetPath, updatedMarkdown, "utf8");
+    const existing = await this.assertRegularNoteEntry(input.scope, fileName);
+    await this.writeFileNoFollow(targetPath, updatedMarkdown, existing === null);
 
     return {
       name: fileName.slice(0, -3),
@@ -520,10 +556,20 @@ export class NotesStorage {
   }
 
   private async readFromScope(scope: NotesScope, fileName: string): Promise<StoredNote | null> {
-    const path = this.getNotePath(scope, fileName);
+    assertSafeNoteFileName(fileName);
+    if (!(await this.scopeDirectoryExists(scope))) {
+      return null;
+    }
 
+    const path = this.getNotePath(scope, fileName);
+    if ((await this.assertRegularNoteEntry(scope, fileName)) === null) {
+      return null;
+    }
+
+    let handle: FileHandle | undefined;
     try {
-      const markdown = await readFile(path, "utf8");
+      handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+      const markdown = await handle.readFile("utf8");
       parseNoteMarkdown(markdown);
 
       return {
@@ -537,38 +583,19 @@ export class NotesStorage {
       if (isNotFound(error)) {
         return null;
       }
-
       throw error;
-    }
-  }
-
-  private async pathExists(path: string): Promise<boolean> {
-    try {
-      await access(path);
-      return true;
-    } catch (error: unknown) {
-      if (isNotFound(error)) {
-        return false;
-      }
-
-      throw error;
+    } finally {
+      await handle?.close();
     }
   }
 
   private async listFromScope(scope: NotesScope): Promise<readonly StoredNote[]> {
-    const directory = this.getNotesDirectory(scope);
-
-    let files: readonly string[];
-    try {
-      files = await readdir(directory);
-    } catch (error: unknown) {
-      if (isNotFound(error)) {
-        return [];
-      }
-
-      throw error;
+    if (!(await this.scopeDirectoryExists(scope))) {
+      return [];
     }
 
+    const directory = this.getNotesDirectory(scope);
+    const files = await readdir(directory);
     const notes: StoredNote[] = [];
     for (const file of files) {
       if (!file.endsWith(".md")) {
@@ -588,5 +615,106 @@ export class NotesStorage {
     }
 
     return notes.sort((a, b) => a.fileName.localeCompare(b.fileName));
+  }
+
+  private async scopeDirectoryExists(scope: NotesScope): Promise<boolean> {
+    const configDirectory = dirname(this.getNotesDirectory(scope));
+    const configStats = await this.lstatOrNull(configDirectory);
+    if (configStats === null) {
+      return false;
+    }
+    this.assertRegularDirectoryStats(configStats, configDirectory, scope);
+
+    const directory = this.getNotesDirectory(scope);
+    const notesStats = await this.lstatOrNull(directory);
+    if (notesStats === null) {
+      return false;
+    }
+    this.assertRegularDirectoryStats(notesStats, directory, scope);
+    await this.assertCanonicalDirectoryContainment(scope);
+    return true;
+  }
+
+  private async ensureRegularDirectory(path: string, scope: NotesScope): Promise<void> {
+    const existing = await this.lstatOrNull(path);
+    if (existing !== null) {
+      this.assertRegularDirectoryStats(existing, path, scope);
+      return;
+    }
+
+    try {
+      await mkdir(path, { mode: 0o700 });
+    } catch (error: unknown) {
+      if (!isAlreadyExists(error)) {
+        throw error;
+      }
+    }
+
+    const created = await this.lstatOrNull(path);
+    if (created === null) {
+      throw new NotesError(`Unsafe ${scope} notes path disappeared during setup: ${path}`);
+    }
+    this.assertRegularDirectoryStats(created, path, scope);
+  }
+
+  private assertRegularDirectoryStats(stats: Stats, path: string, scope: NotesScope): void {
+    if (stats.isSymbolicLink() || !stats.isDirectory()) {
+      throw new NotesError(`Unsafe ${scope} notes directory: ${path}. Remove the symlink or non-directory entry.`);
+    }
+  }
+
+  private async assertCanonicalDirectoryContainment(scope: NotesScope): Promise<void> {
+    const configDirectory = dirname(this.getNotesDirectory(scope));
+    const [canonicalConfig, canonicalNotes] = await Promise.all([
+      realpath(configDirectory),
+      realpath(this.getNotesDirectory(scope))
+    ]);
+    if (!isContainedPath(canonicalConfig, canonicalNotes)) {
+      throw new NotesError(`Unsafe ${scope} notes directory escapes its config directory: ${this.getNotesDirectory(scope)}`);
+    }
+  }
+
+  private async assertRegularNoteEntry(scope: NotesScope, fileName: string): Promise<Stats | null> {
+    assertSafeNoteFileName(fileName);
+    await this.assertCanonicalDirectoryContainment(scope);
+    const notesRoot = await realpath(this.getNotesDirectory(scope));
+    const path = this.getNotePath(scope, fileName);
+    const canonicalCandidate = resolve(notesRoot, fileName);
+    if (!isContainedPath(notesRoot, canonicalCandidate)) {
+      throw new NotesError(`Unsafe ${scope} note path escapes notes storage: ${path}`);
+    }
+
+    const stats = await this.lstatOrNull(path);
+    if (stats === null) {
+      return null;
+    }
+    if (stats.isSymbolicLink() || !stats.isFile()) {
+      throw new NotesError(`Unsafe ${scope} note entry: ${path}. Remove the symlink or non-file entry.`);
+    }
+    return stats;
+  }
+
+  private async writeFileNoFollow(path: string, content: string, create: boolean): Promise<void> {
+    let handle: FileHandle | undefined;
+    try {
+      const flags = create
+        ? constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW
+        : constants.O_WRONLY | constants.O_TRUNC | constants.O_NOFOLLOW;
+      handle = await open(path, flags, 0o600);
+      await handle.writeFile(content, "utf8");
+    } finally {
+      await handle?.close();
+    }
+  }
+
+  private async lstatOrNull(path: string): Promise<Stats | null> {
+    try {
+      return await lstat(path);
+    } catch (error: unknown) {
+      if (isNotFound(error)) {
+        return null;
+      }
+      throw error;
+    }
   }
 }

@@ -2,7 +2,7 @@
 
 Execute in order. A ticket is complete only when its notes/evidence are current, focused validation passes, and its commit is recorded.
 
-- [ ] **tkt-001 — Secure storage roots and reject symlinks**
+- [x] **tkt-001 — Secure storage roots and reject symlinks**
   - Scope: `src/core/storage.ts`, related naming/errors/config plumbing, storage/command tests.
   - Delivers: ST-001; validated root/config inputs; fail-closed regular path handling for all read/mutation/lifecycle operations.
   - Depends on: none.

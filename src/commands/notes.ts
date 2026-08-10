@@ -22,7 +22,10 @@ async function handleParsedNotesCommand(
   }
 
   try {
-    const resolvedStorage = storage ?? new NotesStorage({ cwd: ctx.cwd });
+    const resolvedStorage = storage ?? new NotesStorage({
+      cwd: ctx.cwd,
+      ...(ctx.configDirName === undefined ? {} : { configDirName: ctx.configDirName })
+    });
     await handler({
       args: parsed.args,
       scopeSelection: parsed.scopeSelection,

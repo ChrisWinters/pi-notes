@@ -1,4 +1,5 @@
 import {
+  CONFIG_DIR_NAME,
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
   truncateHead,
@@ -105,6 +106,7 @@ async function executeNotesTool(tool: string, argv: readonly string[], ctx: Exte
 
   await handleNotesCommandArgv(argv, {
     cwd: ctx.cwd,
+    configDirName: CONFIG_DIR_NAME,
     hasUI: false,
     ui: {
       notify: (message, level) => {
@@ -291,7 +293,7 @@ export default function registerPiNotesExtension(pi: ExtensionAPI): void {
   pi.registerCommand("notes", {
     description: "Manage notes in project (.pi/notes) or global (~/.pi/notes) scope",
     handler: async (args, ctx) => {
-      await handleNotesCommand(args, ctx);
+      await handleNotesCommand(args, { ...ctx, configDirName: CONFIG_DIR_NAME });
     }
   });
 
