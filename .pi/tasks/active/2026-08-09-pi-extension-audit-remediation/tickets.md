@@ -7,7 +7,7 @@ Execute in order. A ticket is complete only when its notes/evidence are current,
   - Delivers: ST-001; validated root/config inputs; fail-closed regular path handling for all read/mutation/lifecycle operations.
   - Depends on: none.
 
-- [ ] **tkt-002 — Coordinate mutations and honor cancellation**
+- [x] **tkt-002 — Coordinate mutations and honor cancellation**
   - Scope: storage coordinator abstraction, extension adapter, command context, concurrency/cancellation tests.
   - Delivers: ST-002; Pi shared queue integration, deterministic multi-key ordering, local CLI queue, abort propagation.
   - Depends on: tkt-001 safe path identity.

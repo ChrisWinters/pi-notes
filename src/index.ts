@@ -3,6 +3,7 @@ import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
   truncateHead,
+  withFileMutationQueue,
   type AgentToolResult,
   type ExtensionAPI,
   type ExtensionContext
@@ -11,6 +12,7 @@ import { Type, type Static, type TSchema, type TUnsafe } from "typebox";
 
 import type { NotesNotifyLevel } from "./commands/context.js";
 import { handleNotesCommand, handleNotesCommandArgv } from "./commands/notes.js";
+import { createQueuedMutationCoordinator } from "./core/mutation.js";
 
 const NOTES_SETUP_TOOL_NAME = "notes_setup";
 const NOTES_LIST_TOOL_NAME = "notes_list";
@@ -20,6 +22,8 @@ const NOTES_APPEND_TOOL_NAME = "notes_append";
 const NOTES_GREP_TOOL_NAME = "notes_grep";
 const NOTES_RENAME_TOOL_NAME = "notes_rename";
 const NOTES_MOVE_TOOL_NAME = "notes_move";
+
+const piMutationCoordinator = createQueuedMutationCoordinator(withFileMutationQueue);
 
 const NOTES_SCOPE_VALUES = ["default", "project", "global"] as const;
 const NOTES_MOVE_DESTINATION_VALUES = ["project", "global"] as const;
@@ -101,12 +105,19 @@ function applyScope(argv: string[], scope: NotesToolScope | undefined): string[]
   return argv;
 }
 
-async function executeNotesTool(tool: string, argv: readonly string[], ctx: ExtensionContext): Promise<NotesToolResult> {
+async function executeNotesTool(
+  tool: string,
+  argv: readonly string[],
+  signal: AbortSignal | undefined,
+  ctx: ExtensionContext
+): Promise<NotesToolResult> {
   const messages: NotesToolMessage[] = [];
 
   await handleNotesCommandArgv(argv, {
     cwd: ctx.cwd,
     configDirName: CONFIG_DIR_NAME,
+    mutationCoordinator: piMutationCoordinator,
+    ...(signal === undefined ? {} : { signal }),
     hasUI: false,
     ui: {
       notify: (message, level) => {
@@ -194,8 +205,8 @@ function registerNotesTool<TParams extends TSchema>(
     promptSnippet: tool.promptSnippet,
     promptGuidelines: [...tool.promptGuidelines],
     parameters: tool.parameters,
-    execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
-      return executeNotesTool(tool.name, tool.toArgv(params), ctx);
+    execute: async (_toolCallId, params, signal, _onUpdate, ctx) => {
+      return executeNotesTool(tool.name, tool.toArgv(params), signal, ctx);
     }
   });
 }
@@ -293,7 +304,11 @@ export default function registerPiNotesExtension(pi: ExtensionAPI): void {
   pi.registerCommand("notes", {
     description: "Manage notes in project (.pi/notes) or global (~/.pi/notes) scope",
     handler: async (args, ctx) => {
-      await handleNotesCommand(args, { ...ctx, configDirName: CONFIG_DIR_NAME });
+      await handleNotesCommand(args, {
+        ...ctx,
+        configDirName: CONFIG_DIR_NAME,
+        mutationCoordinator: piMutationCoordinator
+      });
     }
   });
 

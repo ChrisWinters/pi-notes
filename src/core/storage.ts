@@ -7,6 +7,7 @@ import { homedir } from "node:os";
 
 import { NotesError } from "./errors.js";
 import { createEmptyNoteMarkdown, parseNoteMarkdown, withUpdatedTimestamp } from "./format.js";
+import { localMutationCoordinator, throwIfNotesAborted, type MutationCoordinator } from "./mutation.js";
 import { assertSafeNoteFileName, normalizeNoteName } from "./naming.js";
 
 export type NotesScope = "project" | "global";
@@ -20,6 +21,8 @@ export interface NotesStorageOptions {
   readonly cwd: string;
   readonly configDirName?: string;
   readonly globalNotesDir?: string;
+  readonly mutationCoordinator?: MutationCoordinator;
+  readonly signal?: AbortSignal;
 }
 
 export interface StoredNote {
@@ -132,17 +135,19 @@ export function resolveScopePreference(selection: ScopeSelection): NotesScope | 
 }
 
 export class NotesStorage {
-  private static readonly mutationQueues = new Map<string, Promise<void>>();
-
   private readonly cwd: string;
   private readonly configDirName: string;
   private readonly globalNotesDir: string;
+  private readonly mutationCoordinator: MutationCoordinator;
+  private readonly signal: AbortSignal | undefined;
 
   public constructor(options: NotesStorageOptions) {
     this.cwd = resolve(options.cwd);
     this.configDirName = options.configDirName ?? ".pi";
     assertSafeConfigDirName(this.configDirName);
     this.globalNotesDir = resolve(options.globalNotesDir ?? join(homedir(), this.configDirName, "notes"));
+    this.mutationCoordinator = options.mutationCoordinator ?? localMutationCoordinator;
+    this.signal = options.signal;
   }
 
   public getNotesDirectory(scope: NotesScope): string {
@@ -159,19 +164,31 @@ export class NotesStorage {
   }
 
   public async ensureScopeDirectory(scope: NotesScope): Promise<string> {
+    this.assertNotAborted();
     const directory = this.getNotesDirectory(scope);
     const configDirectory = dirname(directory);
 
     // The caller owns the base path (project root or home override). Only the
     // config and notes components are pi-notes trust boundaries.
     await mkdir(dirname(configDirectory), { recursive: true });
+    this.assertNotAborted();
     await this.ensureRegularDirectory(configDirectory, scope);
+    this.assertNotAborted();
     await this.ensureRegularDirectory(directory, scope);
     await this.assertCanonicalDirectoryContainment(scope);
     return directory;
   }
 
   public async setupNotes(input: SetupNotesInput): Promise<SetupNotesResult> {
+    const starterGlobalNotePath = this.getNotePath("global", normalizeNoteName("note"));
+    return this.withMutationQueues(
+      [this.getNotesDirectory("project"), this.getNotesDirectory("global"), starterGlobalNotePath],
+      () => this.setupNotesInternal(input)
+    );
+  }
+
+  private async setupNotesInternal(input: SetupNotesInput): Promise<SetupNotesResult> {
+    this.assertNotAborted();
     const projectDirectoryPath = this.getNotesDirectory("project");
     const globalDirectoryPath = this.getNotesDirectory("global");
     const starterFileName = normalizeNoteName("note");
@@ -179,9 +196,11 @@ export class NotesStorage {
 
     const createdProjectDirectory = !(await this.scopeDirectoryExists("project"));
     await this.ensureScopeDirectory("project");
+    this.assertNotAborted();
 
     const createdGlobalDirectory = !(await this.scopeDirectoryExists("global"));
     await this.ensureScopeDirectory("global");
+    this.assertNotAborted();
 
     let createdStarterGlobalNote = false;
     let handle: FileHandle | undefined;
@@ -209,6 +228,7 @@ export class NotesStorage {
   }
 
   public async noteExists(scope: NotesScope, fileName: string): Promise<boolean> {
+    this.assertNotAborted();
     assertSafeNoteFileName(fileName);
     if (!(await this.scopeDirectoryExists(scope))) {
       return false;
@@ -217,6 +237,7 @@ export class NotesStorage {
   }
 
   public async createNote(input: CreateNoteInput): Promise<StoredNote> {
+    this.assertNotAborted();
     const fileName = normalizeNoteName(input.name);
     const targetPath = this.getNotePath(input.scope, fileName);
 
@@ -230,6 +251,7 @@ export class NotesStorage {
       const nowIso = new Date().toISOString();
       const title = input.title?.trim().length ? input.title : input.name.trim();
       const markdown = createEmptyNoteMarkdown(title, nowIso);
+      this.assertNotAborted();
 
       let handle: FileHandle | undefined;
       try {
@@ -256,6 +278,7 @@ export class NotesStorage {
   }
 
   public async readNoteByFileName(fileName: string, selection: ScopeSelection): Promise<StoredNote | null> {
+    this.assertNotAborted();
     assertSafeNoteFileName(fileName);
     const scopePreference = resolveScopePreference(selection);
 
@@ -264,6 +287,7 @@ export class NotesStorage {
     }
 
     const projectMatch = await this.readFromScope("project", fileName);
+    this.assertNotAborted();
     if (projectMatch !== null) {
       return projectMatch;
     }
@@ -277,6 +301,7 @@ export class NotesStorage {
   }
 
   public async writeNote(input: WriteNoteInput): Promise<StoredNote> {
+    this.assertNotAborted();
     const fileName = normalizeNoteName(input.name);
     const targetPath = this.getNotePath(input.scope, fileName);
 
@@ -286,6 +311,7 @@ export class NotesStorage {
   }
 
   public async appendToNote(input: AppendNoteInput): Promise<StoredNote> {
+    this.assertNotAborted();
     const initial = await this.readNote(input.name, input.selection);
 
     if (initial === null) {
@@ -301,6 +327,7 @@ export class NotesStorage {
 
       const separator = existing.markdown.endsWith("\n") ? "" : "\n";
       const nextMarkdown = `${existing.markdown}${separator}${input.text}\n`;
+      this.assertNotAborted();
 
       return this.writeNoteInternal({
         name: existing.name,
@@ -312,6 +339,7 @@ export class NotesStorage {
   }
 
   public async deleteNote(name: string, selection: ScopeSelection): Promise<boolean> {
+    this.assertNotAborted();
     const initial = await this.readNote(name, selection);
 
     if (initial === null) {
@@ -325,6 +353,7 @@ export class NotesStorage {
         return false;
       }
 
+      this.assertNotAborted();
       await rm(existing.path);
       return true;
     });
@@ -332,23 +361,27 @@ export class NotesStorage {
 
   public async removeScopeDirectory(scope: NotesScope): Promise<{ path: string; removed: boolean }> {
     const directoryPath = this.getNotesDirectory(scope);
+    return this.withMutationQueue(directoryPath, async () => {
+      this.assertNotAborted();
+      if (!(await this.scopeDirectoryExists(scope))) {
+        return {
+          path: directoryPath,
+          removed: false
+        };
+      }
 
-    if (!(await this.scopeDirectoryExists(scope))) {
+      await this.assertCanonicalDirectoryContainment(scope);
+      this.assertNotAborted();
+      await rm(directoryPath, { recursive: true, force: true });
       return {
         path: directoryPath,
-        removed: false
+        removed: true
       };
-    }
-
-    await this.assertCanonicalDirectoryContainment(scope);
-    await rm(directoryPath, { recursive: true, force: true });
-    return {
-      path: directoryPath,
-      removed: true
-    };
+    });
   }
 
   public async moveNote(input: MoveNoteInput): Promise<MoveNoteResult> {
+    this.assertNotAborted();
     const initial = await this.readNote(input.name, input.selection);
     if (initial === null) {
       throw new NotesError(`Note not found: ${input.name}`);
@@ -374,6 +407,9 @@ export class NotesStorage {
         throw new NotesError(`Destination already has note: ${source.fileName}. Re-run with --overwrite.`);
       }
 
+      // Move is consistency-critical after this boundary: complete destination
+      // write and source removal before observing a later cancellation.
+      this.assertNotAborted();
       await this.writeDestination(destinationPath, source.markdown, input.overwrite, source.fileName);
 
       await rm(source.path, { force: true });
@@ -391,6 +427,7 @@ export class NotesStorage {
   }
 
   public async renameNote(input: RenameNoteInput): Promise<RenameNoteResult> {
+    this.assertNotAborted();
     const destinationFileName = normalizeNoteName(input.toName);
     const initial = await this.readNote(input.fromName, input.selection);
     if (initial === null) {
@@ -420,6 +457,8 @@ export class NotesStorage {
         );
       }
 
+      // Rename is consistency-critical after this boundary.
+      this.assertNotAborted();
       await this.writeDestination(destinationPath, source.markdown, input.overwrite, destinationFileName);
 
       await rm(source.path, { force: true });
@@ -438,6 +477,7 @@ export class NotesStorage {
   }
 
   public async listNotes(selection: ScopeSelection): Promise<readonly StoredNote[]> {
+    this.assertNotAborted();
     const scopePreference = resolveScopePreference(selection);
 
     if (scopePreference === "project" || scopePreference === "global") {
@@ -449,6 +489,7 @@ export class NotesStorage {
       this.listFromScope("global")
     ]);
 
+    this.assertNotAborted();
     const merged = new Map<string, StoredNote>();
     for (const note of globalNotes) {
       merged.set(note.fileName, note);
@@ -462,6 +503,7 @@ export class NotesStorage {
   }
 
   public async grepNotes(query: string, selection: ScopeSelection): Promise<readonly StoredNote[]> {
+    this.assertNotAborted();
     const normalizedQuery = query.trim().toLowerCase();
     if (normalizedQuery.length === 0) {
       throw new NotesError("Search query cannot be empty.");
@@ -469,6 +511,7 @@ export class NotesStorage {
 
     const notes = await this.listNotes(selection);
     return notes.filter((note) => {
+      this.assertNotAborted();
       const haystack = `${note.fileName}\n${note.markdown}`.toLowerCase();
       return haystack.includes(normalizedQuery);
     });
@@ -506,6 +549,7 @@ export class NotesStorage {
   }
 
   private async writeNoteInternal(input: WriteNoteInput): Promise<StoredNote> {
+    this.assertNotAborted();
     const fileName = normalizeNoteName(input.name);
     const targetPath = this.getNotePath(input.scope, fileName);
 
@@ -513,6 +557,7 @@ export class NotesStorage {
 
     const updatedMarkdown = withUpdatedTimestamp(input.markdown, input.updatedIso);
     const existing = await this.assertRegularNoteEntry(input.scope, fileName);
+    this.assertNotAborted();
     await this.writeFileNoFollow(targetPath, updatedMarkdown, existing === null);
 
     return {
@@ -525,34 +570,11 @@ export class NotesStorage {
   }
 
   private async withMutationQueue<T>(key: string, operation: () => Promise<T>): Promise<T> {
-    const previous = NotesStorage.mutationQueues.get(key) ?? Promise.resolve();
-
-    const run = previous.then(operation, operation);
-    const queueTail = run.then(
-      () => undefined,
-      () => undefined
-    );
-
-    NotesStorage.mutationQueues.set(key, queueTail);
-
-    try {
-      return await run;
-    } finally {
-      if (NotesStorage.mutationQueues.get(key) === queueTail) {
-        NotesStorage.mutationQueues.delete(key);
-      }
-    }
+    return this.withMutationQueues([key], operation);
   }
 
   private async withMutationQueues<T>(keys: readonly string[], operation: () => Promise<T>): Promise<T> {
-    const uniqueKeys = [...new Set(keys)].sort();
-
-    return uniqueKeys.reduceRight(
-      (nextOperation, key) => {
-        return () => this.withMutationQueue(key, nextOperation);
-      },
-      operation
-    )();
+    return this.mutationCoordinator.withMutations(keys, operation, this.signal);
   }
 
   private async readFromScope(scope: NotesScope, fileName: string): Promise<StoredNote | null> {
@@ -598,6 +620,7 @@ export class NotesStorage {
     const files = await readdir(directory);
     const notes: StoredNote[] = [];
     for (const file of files) {
+      this.assertNotAborted();
       if (!file.endsWith(".md")) {
         continue;
       }
@@ -705,6 +728,10 @@ export class NotesStorage {
     } finally {
       await handle?.close();
     }
+  }
+
+  private assertNotAborted(): void {
+    throwIfNotesAborted(this.signal);
   }
 
   private async lstatOrNull(path: string): Promise<Stats | null> {

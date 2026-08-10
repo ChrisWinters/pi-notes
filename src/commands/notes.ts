@@ -24,7 +24,9 @@ async function handleParsedNotesCommand(
   try {
     const resolvedStorage = storage ?? new NotesStorage({
       cwd: ctx.cwd,
-      ...(ctx.configDirName === undefined ? {} : { configDirName: ctx.configDirName })
+      ...(ctx.configDirName === undefined ? {} : { configDirName: ctx.configDirName }),
+      ...(ctx.mutationCoordinator === undefined ? {} : { mutationCoordinator: ctx.mutationCoordinator }),
+      ...(ctx.signal === undefined ? {} : { signal: ctx.signal })
     });
     await handler({
       args: parsed.args,

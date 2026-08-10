@@ -77,9 +77,10 @@ async function executeTool(
   tools: Map<string, RegisteredTool>,
   name: string,
   params: Record<string, unknown>,
-  cwd: string
+  cwd: string,
+  signal?: AbortSignal
 ): Promise<{ text: string; details: NotesToolDetails }> {
-  const result = await getTool(tools, name).execute("test", params, undefined, undefined, createContext(cwd));
+  const result = await getTool(tools, name).execute("test", params, signal, undefined, createContext(cwd));
   const text = result.content.map((part) => part.text).join("\n");
   return { text, details: result.details as NotesToolDetails };
 }
@@ -215,6 +216,20 @@ describe("pi-notes tools", () => {
     await expect(executeTool(tools, "notes_new", { name: "dupe", scope: "project" }, cwd)).rejects.toThrow(
       "Note already exists: dupe.md"
     );
+  });
+
+  it("rejects a pre-aborted mutation without creating a note", async () => {
+    const cwd = await createTempCwd();
+    const { api, tools } = createExtensionApi();
+    registerPiNotesExtension(api);
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      executeTool(tools, "notes_new", { name: "cancelled", scope: "project" }, cwd, controller.signal)
+    ).rejects.toThrow("Notes operation cancelled");
+    const list = await executeTool(tools, "notes_list", { scope: "project" }, cwd);
+    expect(list.text).not.toContain("cancelled.md");
   });
 
   it("truncates large tool output", async () => {
