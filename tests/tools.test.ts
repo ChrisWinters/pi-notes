@@ -325,14 +325,14 @@ describe("pi-notes tools", () => {
     expect(notifications).toEqual([]);
   });
 
-  it("emits one notification for direct commands in RPC mode", async () => {
+  it.each(["rpc", "tui"] as const)("emits one notification for direct commands in %s mode", async (mode) => {
     const cwd = await createTempCwd();
     const { api, commands } = createExtensionApi();
     registerPiNotesExtension(api);
     const notifications: string[] = [];
     const context = {
       cwd,
-      mode: "rpc",
+      mode,
       hasUI: true,
       ui: {
         notify: (message: string) => notifications.push(message),
@@ -344,6 +344,26 @@ describe("pi-notes tools", () => {
     await commands.get("notes")?.handler("ls --project", context);
     expect(notifications).toHaveLength(1);
     expect(notifications[0]).toContain("No notes found");
+  });
+
+  it("emits one warning for a missing note in TUI mode", async () => {
+    const cwd = await createTempCwd();
+    const { api, commands } = createExtensionApi();
+    registerPiNotesExtension(api);
+    const notifications: Array<{ message: string; level: string }> = [];
+    const context = {
+      cwd,
+      mode: "tui",
+      hasUI: true,
+      ui: {
+        notify: (message: string, level: string) => notifications.push({ message, level }),
+        confirm: () => Promise.resolve(false),
+        editor: () => Promise.resolve(undefined)
+      }
+    } as unknown as ExtensionContext;
+
+    await commands.get("notes")?.handler("show missing --project", context);
+    expect(notifications).toEqual([{ message: "Note not found: missing", level: "warning" }]);
   });
 
   it("truncates large tool output and retains the complete private artifact", async () => {

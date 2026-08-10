@@ -1,16 +1,13 @@
 # tkt-009 notes — Complete boundary proof and repair reconciliation
 
-## Objective
+## Changes
 
-Implement ST-009 and repair validator GAP-004 after tkt-007/tkt-008 behavior stabilizes.
+- Added both-scope broken note-link tests covering read and uninstall rejection.
+- Added deterministic scan-phase cancellation using an abort signal that flips during per-entry checks.
+- Added an actual extension integration test that mocks Pi's exported `withFileMutationQueue`, places an independent Pi-style mutation ahead of append on the same path, and proves the tool waits for the complete shared queue window.
+- Extended direct-command adapter coverage to TUI success and missing-note warning paths; each emits exactly one notification alongside existing RPC one-notification and headless no-notification evidence.
+- Added the Pi queue integration test to scan-first agent docs and reran docs/package/build reconciliation.
 
-## Scope
+## Reconciliation
 
-- Complete broken-link and scan-phase cancellation evidence.
-- Add Pi-style shared queue integration/race evidence.
-- Add TUI adapter success/error/no-duplicate evidence while retaining offline print/JSON/RPC coverage.
-- Reconcile docs, build/package output, task artifacts, and complete validation.
-
-## Execution notes
-
-Pending execution.
+All four validator findings now have implementation and deterministic evidence in tkt-007 through tkt-009. Root `gaps.md` remains unchanged for independent validator ownership.

@@ -121,6 +121,7 @@ validation:
     refs:
       - tests/storage.test.ts
       - tests/mutation.test.ts
+      - tests/pi-queue-integration.test.ts
       - tests/tools.test.ts
       - tests/modes.test.ts
       - tests/package-resources.test.ts

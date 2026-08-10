@@ -42,7 +42,7 @@ Execute in order. A ticket is complete only when its notes/evidence are current,
   - Delivers: ST-008 and repairs GAP-001.
   - Depends on: tkt-004 output adapter.
 
-- [ ] **tkt-009 — Complete boundary proof and repair reconciliation**
+- [x] **tkt-009 — Complete boundary proof and repair reconciliation**
   - Scope: broken-link, scan-abort, Pi-style queue, TUI adapter tests; docs/evidence/final gates.
   - Delivers: ST-009 and repairs GAP-004 plus cross-gap final evidence.
   - Depends on: tkt-007 and tkt-008.

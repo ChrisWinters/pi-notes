@@ -446,6 +446,45 @@ describe("NotesStorage", () => {
     });
   });
 
+  it.each(["project", "global"] as const)("rejects broken %s note links during read and uninstall", async (scope) => {
+    await withStorage(async (storage) => {
+      await storage.ensureScopeDirectory(scope);
+      const brokenPath = storage.getNotePath(scope, "broken.md");
+      await symlink(join(dirname(storage.getNotesDirectory(scope)), "missing-target.md"), brokenPath);
+      const selection = { forceProject: scope === "project", forceGlobal: scope === "global" };
+
+      await expect(storage.readNote("broken", selection)).rejects.toThrow("Remove the symlink");
+      await expect(storage.removeScopeDirectory(scope)).rejects.toThrow("Remove the symlink");
+      await expect(readFile(brokenPath, "utf8")).rejects.toThrow();
+    });
+  });
+
+  it("cancels between note scan phases", async () => {
+    await withStorage(async (storage) => {
+      await storage.createNote({ name: "scan-a", scope: "project" });
+      await storage.createNote({ name: "scan-b", scope: "project" });
+      await storage.createNote({ name: "scan-c", scope: "project" });
+      let checks = 0;
+      const signal = {
+        get aborted(): boolean {
+          checks += 1;
+          return checks >= 3;
+        }
+      } as AbortSignal;
+      const cwd = dirname(dirname(storage.getNotesDirectory("project")));
+      const abortingStorage = new NotesStorage({
+        cwd,
+        globalNotesDir: storage.getNotesDirectory("global"),
+        signal
+      });
+
+      await expect(abortingStorage.listNotes({ forceProject: true, forceGlobal: false })).rejects.toThrow(
+        "Notes operation cancelled"
+      );
+      expect(checks).toBeGreaterThanOrEqual(3);
+    });
+  });
+
   it("rejects symlinked config and notes directories", async () => {
     const root = await mkdtemp(join(tmpdir(), "pi-notes-dir-link-test-"));
     try {
