@@ -222,6 +222,43 @@ npm run build
 - Workflow tests/static assertions confirm intentional triggers, tag/version preflight, provenance permissions, and `npm ci`.
 - Docs and skill examples match actual command/tool schemas and mode behavior.
 
+## Validator gap repair handoff
+
+The validator-owned `gaps.md` adds a bounded repair cycle after the initial six chunks. Preserve the original contracts and reconcile the existing spec/tickets rather than creating a parallel task.
+
+### Repair chunk A — Stable mutation identities and strict uninstall scan
+
+- For append/delete/move/rename, derive the complete candidate key set from the explicit/default scope selection before acquisition.
+- Acquire unique sorted candidate source and possible destination paths, then select/revalidate the actual winner only inside that window.
+- Ensure the path mutated or removed is always one of the acquired keys.
+- Before uninstall recursive removal, recursively inspect the regular notes tree with no-follow metadata inside the directory mutation window; reject symlinks and wrong entry types without changing any entry.
+- Add race tests that change the default-scope winner while acquisition is waiting and assert every actual path was acquired.
+- Add both-scope inner symlink/broken-link uninstall tests with external targets unchanged.
+
+### Repair chunk B — Truly bounded output and active artifact expiration
+
+- Build the recovery notice first and reserve enough bytes/lines so the complete returned text, including artifact path, stays at or below Pi's limits.
+- Schedule deletion for each newly created artifact at its deadline while the host remains alive; make timers non-blocking for process shutdown.
+- Export/run stale artifact cleanup during extension registration as well as before artifact creation, so a later non-truncating startup reclaims expired output.
+- Document that a stopped host cannot execute its timer and cleanup resumes on later startup or OS temporary cleanup; do not claim guaranteed wall-clock deletion while no process runs.
+- Test complete result byte/line bounds, deadline-triggered deletion with fake timers or an injected short retention, and registration/startup cleanup.
+
+### Repair chunk C — Complete validation matrix
+
+- Add broken note-entry symlink coverage, list/grep scan-phase abort with deterministic hooks/coordinator timing, a Pi-style shared queue spy/race over the complete operation, and TUI adapter success/error/no-duplicate checks.
+- Keep all mode checks offline and credential-free.
+- Reconcile public docs and ticket evidence with repaired behavior and residual limitations.
+
+### Repair ordering and validation
+
+1. Stable locking and uninstall scanning first because tests depend on the corrected operation boundaries.
+2. Output bounding/expiry second, independent of storage mutations.
+3. Missing boundary evidence and docs reconciliation last.
+4. Run focused tests per repair ticket, then lint, typecheck, full tests, build, npm dry-run, agent-docs validation, task-plan validation, and focused task validation.
+5. Return to independent validator review; do not delete or rewrite validator-owned `gaps.md` during execution.
+
+No new human review decision is required. If portable recursive scanning or active cleanup cannot satisfy these boundaries without a new daemon/privileged mechanism, stop and return that concrete limitation to validation rather than weakening the contract.
+
 ## Human review gates
 
 No product questions remain before specification or execution. Stop for human input only if implementation discovery reveals one of these boundaries cannot be satisfied safely without changing a confirmed decision:
