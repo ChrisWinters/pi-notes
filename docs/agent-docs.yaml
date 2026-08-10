@@ -21,6 +21,13 @@ entrypoints:
       - package.json
 
 architecture:
+  boundaries:
+    note: "Package shim delegates to Pi adapter; Pi adapter uses commands/core; CLI uses commands."
+    refs:
+      - .fallowrc.json
+      - extensions/pi-notes/index.ts
+      - src/index.ts
+      - src/cli.ts
   command_routing:
     note: "Slash commands, tools, and CLI share parser and handlers."
     refs:

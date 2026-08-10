@@ -2,7 +2,7 @@
 
 Execute in numeric order. `tkt-004` depends on all prior tickets and owns final reconciliation.
 
-## [ ] tkt-001 — Correct adapter boundary zones
+## [x] tkt-001 — Correct adapter boundary zones
 
 ### Scope
 

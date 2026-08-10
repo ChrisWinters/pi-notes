@@ -10,10 +10,20 @@
   "boundaries": {
     "zones": [
       {
-        "name": "entry",
+        "name": "package-shim",
         "patterns": [
-          "extensions/**/*.ts",
-          "src/index.ts",
+          "extensions/**/*.ts"
+        ]
+      },
+      {
+        "name": "pi-extension-adapter",
+        "patterns": [
+          "src/index.ts"
+        ]
+      },
+      {
+        "name": "cli-adapter",
+        "patterns": [
           "src/cli.ts"
         ]
       },
@@ -38,9 +48,24 @@
     ],
     "rules": [
       {
-        "from": "entry",
+        "from": "package-shim",
         "allow": [
-          "entry",
+          "package-shim",
+          "pi-extension-adapter"
+        ]
+      },
+      {
+        "from": "pi-extension-adapter",
+        "allow": [
+          "pi-extension-adapter",
+          "commands",
+          "core"
+        ]
+      },
+      {
+        "from": "cli-adapter",
+        "allow": [
+          "cli-adapter",
           "commands"
         ]
       },

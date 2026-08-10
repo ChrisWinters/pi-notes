@@ -15,6 +15,10 @@
 - `src/ui/render.ts` — textual list/show/search/rewrite rendering.
 - `skills/pi-notes/SKILL.md` — packaged tool-first routing and destructive handoffs.
 
+## Architecture boundaries
+
+Fallow models the package shim, Pi extension adapter, and CLI adapter as separate zones. The package shim delegates only to the Pi adapter; the Pi adapter may use shared commands and core host-integration services; the CLI adapter may use shared commands but has no broad core access. Commands may use command, core, and UI modules; core remains self-contained; UI may use core types only.
+
 ## Data flow
 
 1. `/notes`, `notes_*`, or `pi-notes` maps input into the shared parser and handlers.
