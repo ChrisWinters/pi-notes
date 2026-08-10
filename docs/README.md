@@ -1,16 +1,11 @@
 # Documentation
 
-This directory contains durable project documentation and execution plans.
+Durable user and maintainer documentation for pi-notes:
 
-## Key areas
+- [Commands](commands.md) — slash commands, tools, CLI, scopes, and mode behavior
+- [Storage](storage.md) — roots, format, resolution, and mutation coordination
+- [Security](security.md) — filesystem boundary, destructive actions, and residual trust
+- [Architecture](architecture.md) — extension, adapters, storage core, and output flow
+- [Release](release.md) — validation, versioning, and controlled publication
 
-- `docs/plans/active/` — active execution plans
-- `docs/plans/completed/` — completed plans
-
-## Current active plans
-
-- _None currently_
-
-## Latest completed plan
-
-- `docs/plans/completed/2026-04-05-pi-notes-agent-skill-bundle/`
+Project lifecycle artifacts are maintained outside the published documentation tree and are not part of the package documentation contract.

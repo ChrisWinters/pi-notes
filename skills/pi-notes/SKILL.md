@@ -47,8 +47,8 @@ Treat as pi-notes intent when user says things like:
 
 Tool scope values:
 
-- `project` => project notes under `.pi/notes/`
-- `global` => global notes under `~/.pi/notes/`
+- `project` => project notes under the host config directory (`.pi/notes/` on standard Pi)
+- `global` => global notes under the host config directory (`~/.pi/notes/` on standard Pi)
 - `default` or omitted => command default behavior
 
 Rules:

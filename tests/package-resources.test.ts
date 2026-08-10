@@ -94,6 +94,22 @@ describe("package resource manifest", () => {
     expect(skill).toContain("Never suggest `/pi-notes ...` as a slash command.");
   });
 
+  it("documents remediated mode, storage, and concurrency boundaries", async () => {
+    const commands = await readFile(join(process.cwd(), "docs", "commands.md"), "utf8");
+    const storage = await readFile(join(process.cwd(), "docs", "storage.md"), "utf8");
+    const security = await readFile(join(process.cwd(), "docs", "security.md"), "utf8");
+    const docsIndex = await readFile(join(process.cwd(), "docs", "README.md"), "utf8");
+
+    expect(commands).toContain("Pi print");
+    expect(commands).toContain("pi-notes ...");
+    expect(commands).toContain("2,000 lines or 50KB");
+    expect(storage).toContain("CONFIG_DIR_NAME");
+    expect(storage).toContain("Separate CLI processes are not serialized");
+    expect(security).toContain("Symlink rejection");
+    expect(security).toContain("Canonical containment");
+    expect(docsIndex).not.toContain("docs/plans/");
+  });
+
   it("documents tool-first behavior without exposing hidden aliases", async () => {
     const readme = await readFile(join(process.cwd(), "README.md"), "utf8");
     const commands = await readFile(join(process.cwd(), "docs", "commands.md"), "utf8");

@@ -6,10 +6,7 @@ A human-first notes extension for [Pi](https://github.com/earendil-works/pi-mono
 
 [pi-notes](https://github.com/ChrisWinters/pi-notes) adds a `/notes` command family plus agent-facing `notes_*` tools to Pi so you can create, read, update, search, and safely remove notes without leaving your terminal flow.
 
-Notes are stored in markdown and can live at:
-
-- project scope: `.pi/notes/`
-- global scope: `~/.pi/notes/`
+Notes are stored as Markdown in project or global scope. The extension honors Pi's configured directory name (`<cwd>/<CONFIG_DIR_NAME>/notes` and `~/<CONFIG_DIR_NAME>/notes`); standard Pi and the standalone CLI use `.pi/notes` and `~/.pi/notes`.
 
 ## Install
 
@@ -58,7 +55,9 @@ Agent-facing tools registered by the extension:
 - `notes_rename`
 - `notes_move`
 
-Destructive/editor flows intentionally remain command/CLI handoffs instead of agent tools.
+Destructive/editor flows intentionally remain command/CLI handoffs instead of agent tools. Agent move/rename tools expose no overwrite option; conflicts return the exact `/notes ... --overwrite` command for the user to run and confirm.
+
+List/show/grep tool output is bounded to 2,000 lines or 50KB. Complete truncated results are stored in owner-only OS temporary artifacts for 24 hours and their path is returned in the tool result.
 
 Package CLI (deterministic non-interactive flows):
 
@@ -96,6 +95,7 @@ Parser semantics:
 
 - scope flags are parsed only at argument edges (leading/trailing)
 - move flags (`--to-global`, `--to-project`, `--overwrite`) are parsed only for `/notes move` and only at argument edges
+- rename recognizes `--overwrite` only at argument edges
 - flag-like tokens inside content are preserved as literal text
 - use `--` to force all following tokens to be treated literally
 
@@ -109,15 +109,21 @@ Parser semantics:
 
 - Deterministic note commands for CRUD + search
 - Dual-scope storage (project + global)
-- Safe name normalization and path protections
-- Atomic note creation and serialized note mutations
-- Confirm-gated destructive operations (`rm`, `uninstall`, overwrite move)
+- Lexical name validation, strict symlink rejection, regular-path checks, and canonical containment
+- Atomic creation plus Pi-wide mutation coordination in extension mode and in-process coordination in CLI mode
+- Cancellation checks before queued mutations
+- Confirm-gated destructive operations (`rm`, `uninstall`, overwrite move/rename)
 - Markdown-preserving editor workflow with `/notes edit`
 - Bootstrap setup flow with starter global note (`/notes setup`)
 - Markdown + frontmatter note format
 
+## Pi modes
+
+Interactive TUI and RPC `/notes` commands use Pi notifications/dialogs. Direct `/notes` in print or JSON mode is intentionally unsupported and emits an observable stderr error with the equivalent `pi-notes ...` CLI handoff; use the CLI for reliable headless output and exit status.
+
 ## Docs
 
+- Documentation index: `docs/README.md`
 - Commands: `docs/commands.md`
 - Storage model: `docs/storage.md`
 - Security model: `docs/security.md`

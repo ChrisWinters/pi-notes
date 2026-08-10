@@ -1,56 +1,38 @@
 # Architecture
 
-`pi-notes` is a Pi extension with tool-first agent support, a `/notes` command family, a package CLI, and a deterministic storage core.
+`pi-notes` is a Pi extension with tool-first agent support, a `/notes` command family, a standalone package CLI, and a shared storage core.
 
 ## Modules
 
-- `extensions/pi-notes/index.ts`
-  - package-specific Pi extension entrypoint declared by `package.json`
-  - delegates to `src/index.ts` without duplicating registration logic
-- `src/index.ts`
-  - implements the `/notes` command registration via `pi.registerCommand`
-  - registers agent-facing `notes_*` tools via `pi.registerTool`
-  - adapts tool execution through shared command handlers, tool error signaling, and output truncation
-- `src/cli.ts`
-  - package CLI entrypoint (`pi-notes ...`) for deterministic script/terminal usage
-- `skills/pi-notes/SKILL.md`
-  - packaged agent skill for tool-first note routing with `/notes`/CLI fallback guidance
-- `src/commands/notes.ts`
-  - parses command arguments and scope flags
-  - orchestrates command-specific flows (`ls/show/new/append/rm/grep/rewrite/move/rename/uninstall`)
-- `src/core/naming.ts`
-  - note-name normalization and filename safety validation
-- `src/core/storage.ts`
-  - scope-aware filesystem operations and note lifecycle
-- `src/core/format.ts`
-  - frontmatter parse/render and timestamp update helpers
-- `src/core/errors.ts`
-  - typed error model for domain validation
-- `src/ui/render.ts`
-  - textual presentation helpers for list/show/search/rewrite preview
+- `extensions/pi-notes/index.ts` — package extension entrypoint.
+- `src/index.ts` — registers `/notes` with `pi.registerCommand` and `notes_*` with `pi.registerTool`, injects Pi configuration/queueing, adapts outcomes, and bounds tool output.
+- `src/cli.ts` — standalone `pi-notes` adapter with `.pi` compatibility defaults.
+- `src/commands/` — parser, typed command outcomes, UI abstraction, and handlers.
+- `src/core/storage.ts` — scope resolution, regular-path validation, containment, and note lifecycle.
+- `src/core/mutation.ts` — deterministic multi-path coordination abstraction and local queue.
+- `src/core/output-artifact.ts` — private temporary recovery artifacts and bounded cleanup.
+- `src/core/naming.ts` / `format.ts` / `errors.ts` — names, markdown frontmatter, and domain errors.
+- `src/ui/render.ts` — textual list/show/search/rewrite rendering.
+- `skills/pi-notes/SKILL.md` — packaged tool-first routing and destructive handoffs.
 
 ## Data flow
 
-1. `/notes ...` command enters `handleNotesCommand()`, or a `notes_*` tool maps parameters to command argv.
-2. flags/subcommand parsed through the shared parser/handler flow.
-3. storage and naming layers enforce safety and scope rules.
-4. command results are rendered and surfaced via `ctx.ui.notify` (or CLI stdout/stderr).
-5. tool execution captures notifications, throws on error-level messages, and truncates successful output before returning it to the model.
-6. confirm-gated operations use `ctx.ui.confirm` (and `ctx.hasUI` checks); destructive/editor flows are intentionally not exposed as agent tools.
+1. `/notes`, `notes_*`, or `pi-notes` maps input into the shared parser and handlers.
+2. Handlers report an explicit `success`, `failure`, or `cancelled` outcome independently of notification severity.
+3. Storage validates lexical names, rejects symlink/wrong-type paths, checks canonical containment, and runs mutations through an injected coordinator.
+4. Extension mutations use Pi's `withFileMutationQueue()`; standalone/internal storage uses deterministic in-process coordination.
+5. TUI/RPC commands use UI notifications and dialogs. CLI maps outcomes to output and exit status. Tools throw on non-successful outcomes.
+6. Tool text is truncated to Pi's 2,000-line/50KB limits. Complete truncated text is placed in a private temporary artifact for 24-hour recovery.
 
-## Pi alignment
+## Mode behavior
 
-This repository tracks Pi extension contract behavior against upstream Pi docs:
+- **TUI:** notifications, confirmation, and editor flows are supported.
+- **RPC:** Pi's extension UI protocol receives the same notifications/dialog requests without a second output transport.
+- **Print/JSON:** direct `/notes` commands are intentionally unsupported because command return values have no documented output channel, UI calls are no-ops, and `pi.sendMessage()` would add model context. The handler throws an observable stderr error with the equivalent `pi-notes ...` command. JSON protocol stdout remains unmodified.
+- **Tools:** return bounded model-visible results and structured details; failures throw for Pi `isError` handling.
 
-- https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/docs/extensions.md
+## Trust and concurrency boundaries
 
-Key contracts followed:
+Pi extensions execute with the user's permissions. Storage confinement protects note operations from symlink/path redirection; it is not a sandbox for other extension code or compromised processes.
 
-- extension default export + `ExtensionAPI`
-- command registration through `pi.registerCommand`
-- custom tool registration through `pi.registerTool`
-- tool failures throw from `execute` so Pi can mark tool execution as failed
-- tool output is truncated before returning to the model
-- non-interactive safeguards using `ctx.hasUI`
-- awareness of command name collision suffixing (`/notes:1` pattern)
-- CLI and tools reuse command parser + handlers to reduce behavior drift between `/notes`, `notes_*`, and `pi-notes`
+Pi-hosted operations coordinate with Pi's mutation queue. CLI operations in one process coordinate locally. Separate CLI processes and unrelated programs are not locked by pi-notes.

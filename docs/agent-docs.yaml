@@ -1,9 +1,8 @@
 project:
   package: "@tribalnerd/pi-notes"
-  purpose: "Pi extension and CLI for deterministic project/global notes"
+  purpose: "Pi extension and CLI for project/global Markdown notes"
   refs:
     - package.json
-    - extensions/pi-notes/index.ts
     - src/index.ts
     - src/cli.ts
 
@@ -11,52 +10,59 @@ entrypoints:
   pi_extension:
     path: extensions/pi-notes/index.ts
     implementation: src/index.ts
-    command: "/notes"
     refs:
       - extensions/pi-notes/index.ts
       - src/index.ts
-      - src/commands/notes.ts
-  cli_bin:
-    bin: "pi-notes"
+  cli:
     path: src/cli.ts
     built: dist/src/cli.js
     refs:
-      - package.json
       - src/cli.ts
+      - package.json
 
 architecture:
-  shared_command_routing:
-    note: "Extension and CLI both route to shared command handlers."
+  command_routing:
+    note: "Slash commands, tools, and CLI share parser and handlers."
     refs:
       - src/commands/notes.ts
       - src/commands/handlers/index.ts
-  cli_entry_detection:
-    note: "Direct execution compares realpaths so npm/global symlink bins dispatch. Importing stays side-effect safe."
+  storage_boundary:
+    note: "Storage validates roots, containment, entry types, and note lifecycle."
+    refs:
+      - src/core/storage.ts
+      - src/core/naming.ts
+  coordination:
+    note: "Injected coordinator uses Pi queue or process-local fallback."
+    refs:
+      - src/core/mutation.ts
+      - src/index.ts
+  output_recovery:
+    note: "Truncated tool output uses private bounded-retention artifacts."
+    refs:
+      - src/core/output-artifact.ts
+      - src/index.ts
+
+runtime_flows:
+  outcomes:
+    note: "Handlers report success, failure, or cancellation separately from UI severity."
+    refs:
+      - src/commands/context.ts
+      - src/commands/notes.ts
+  extension_storage:
+    note: "Extension injects host config directory and Pi mutation queue."
+    refs:
+      - src/index.ts
+      - src/core/storage.ts
+  headless_commands:
+    note: "Print/JSON direct commands throw an observable CLI handoff."
+    refs:
+      - src/index.ts
+      - tests/modes.test.ts
+  cli:
+    note: "CLI defaults to .pi and maps failed outcomes to nonzero status."
     refs:
       - src/cli.ts
       - tests/cli.test.ts
-  context_boundary:
-    note: "Handlers receive cwd, UI capability, notifier, confirm, and editor through NotesCommandContext."
-    refs:
-      - src/commands/context.ts
-      - src/cli.ts
-
-runtime_flows:
-  help:
-    note: "No args, help, commands, --help, and -h render NOTES_USAGE."
-    refs:
-      - src/cli.ts
-      - src/commands/shared.ts
-  non_interactive_cli:
-    note: "CLI prompts are unavailable unless TTY is interactive or --yes/-y is supplied."
-    refs:
-      - src/cli.ts
-      - src/commands/shared.ts
-  storage_scope:
-    note: "Default create scope is project unless --global selects global."
-    refs:
-      - src/commands/shared.ts
-      - src/core/storage.ts
 
 contracts:
   command_grammar:
@@ -64,33 +70,46 @@ contracts:
       - src/commands/parser.ts
       - src/commands/shared.ts
       - tests/parser.test.ts
-  note_storage:
+  storage_safety:
     refs:
       - src/core/storage.ts
-      - src/core/naming.ts
       - tests/storage.test.ts
-  cli_import_safety:
+  tool_contract:
     refs:
-      - src/cli.ts
-      - tests/cli.test.ts
+      - src/index.ts
+      - tests/tools.test.ts
+  package_contract:
+    refs:
+      - package.json
+      - tests/package-resources.test.ts
 
 state:
   project_notes:
-    path: .pi/notes
+    path: "<cwd>/<CONFIG_DIR_NAME>/notes"
     refs:
+      - src/index.ts
       - src/core/storage.ts
   global_notes:
-    path: ~/.pi/notes
+    path: "~/<CONFIG_DIR_NAME>/notes"
     refs:
+      - src/index.ts
+      - src/core/storage.ts
+  cli_default:
+    path: ".pi/notes and ~/.pi/notes"
+    refs:
+      - src/cli.ts
       - src/core/storage.ts
 
 integrations:
-  pi_package:
+  pi:
+    note: "Registers command/tools and uses host config, queue, truncation, and error APIs."
     refs:
-      - package.json
-      - extensions/pi-notes/index.ts
       - src/index.ts
+      - package.json
+  agent_skill:
+    refs:
       - skills/pi-notes/SKILL.md
+      - package.json
 
 validation:
   required_checks:
@@ -98,33 +117,43 @@ validation:
     - npm run typecheck
     - npm run test
     - npm run build
-  smoke_checks:
-    - "node dist/src/cli.js --help"
-    - "symlink/chmod local dist/src/cli.js then run pi-notes --help"
-  refs:
-    - package.json
-    - tests/cli.test.ts
+  boundary_tests:
+    refs:
+      - tests/storage.test.ts
+      - tests/mutation.test.ts
+      - tests/tools.test.ts
+      - tests/modes.test.ts
+      - tests/package-resources.test.ts
+      - tests/workflows.test.ts
 
 operations:
   build:
-    note: "Do not hand-edit dist; regenerate with npm run build."
+    note: "Regenerate dist with npm run build; do not hand-edit generated files."
     refs:
       - package.json
       - tsconfig.build.json
+  release:
+    note: "Published release or main-ref manual tag route verifies tag/version before provenance publish."
+    refs:
+      - .github/workflows/publish.yml
+      - package.json
 
 constraints:
   safety:
-    - "Reject unsafe note names and paths in core validation."
-    - "Confirm destructive commands unless UI is available or --yes/-y is supplied."
-    - "Do not change command grammar without docs and migration notes."
+    - "Reject unsafe names, symlinks, wrong path types, and containment escapes."
+    - "Keep destructive and overwrite operations human-confirmed."
+    - "Do not claim cross-process CLI coordination."
   refs:
-    - src/core/naming.ts
+    - src/core/storage.ts
+    - src/core/mutation.ts
     - src/commands/shared.ts
-    - AGENTS.md
 
 glossary:
-  project_scope: ".pi/notes under current project cwd"
-  global_scope: "~/.pi/notes"
-  direct_cli_entry: "src/cli.ts running as process.argv[1], including symlinked npm bins"
+  project_scope: "Notes under the current project host config directory."
+  global_scope: "Notes under the home host config directory."
+  local_queue: "Process-local mutation serialization used outside Pi host injection."
+  refs:
+    - src/core/storage.ts
+    - src/core/mutation.ts
 
 open_questions: []

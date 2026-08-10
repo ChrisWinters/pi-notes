@@ -1,18 +1,10 @@
 # Commands
 
-`pi-notes` exposes three surfaces:
+pi-notes exposes `/notes` through Pi, safe agent-facing `notes_*` tools, and the standalone `pi-notes` CLI. The bundled `pi-notes` skill prefers tools and hands restricted operations back to the user.
 
-- `/notes` command family via `pi.registerCommand("notes", ...)`
-- agent-facing `notes_*` tools via `pi.registerTool(...)`
-- `pi-notes` package CLI (`bin`) for deterministic script/terminal usage
+## Slash command syntax
 
-It also bundles a skill at `skills/pi-notes/SKILL.md` (invokable as `/skill:pi-notes`) to guide intent routing. The skill prefers registered `notes_*` tools when available, then falls back to `/notes` or the CLI for restricted or unavailable tool flows.
-
-## Syntax
-
-- `/notes`
-- `/notes help`
-- `/notes commands`
+- `/notes` / `/notes help` / `/notes commands`
 - `/notes setup`
 - `/notes ls [--project|--global]`
 - `/notes show <name> [--project|--global]`
@@ -26,94 +18,60 @@ It also bundles a skill at `skills/pi-notes/SKILL.md` (invokable as `/skill:pi-n
 - `/notes rename <from> <to> [--project|--global] [--overwrite]`
 - `/notes uninstall [--project] [--global]`
 
-Agent tool equivalents:
+## Agent tools
 
-- `notes_setup`
-- `notes_list`
-- `notes_show`
-- `notes_new`
-- `notes_append`
-- `notes_grep`
-- `notes_rename`
-- `notes_move`
+Registered tools are `notes_setup`, `notes_list`, `notes_show`, `notes_new`, `notes_append`, `notes_grep`, `notes_rename`, and `notes_move`.
 
-No destructive/editor tools are registered; `rm`, `uninstall`, `edit`, and `rewrite` remain explicit command/CLI handoffs.
+Delete, uninstall, edit, rewrite, and overwrite confirmation are intentionally not agent-authorized. `notes_rename` and `notes_move` expose no `overwrite` property. On a destination conflict they fail with an exact interactive handoff, for example:
 
-CLI equivalents:
+```text
+/notes rename source target --project --overwrite
+/notes move source --to-global --project --overwrite
+```
 
-- `pi-notes ls [--project|--global]`
-- `pi-notes show <name> [--project|--global]`
-- `pi-notes new <name> [--project|--global]`
-- `pi-notes append <name> <text> [--project|--global]`
-- `pi-notes rm <name> [--project|--global] [--yes]`
-- `pi-notes grep <query> [--project|--global]`
+The user must run and confirm that command. List/show/grep output is limited to 2,000 lines or 50KB. When truncated, the result includes a private full-output artifact path and structured truncation metadata; the artifact is retained for 24 hours.
+
+## CLI
+
+Use `pi-notes`, `npx @tribalnerd/pi-notes`, or repository-local `node dist/src/cli.js`:
+
+- `pi-notes ls|show|new|append|grep ... [--project|--global]`
 - `pi-notes move <name> --to-global|--to-project [--project|--global] [--overwrite]`
 - `pi-notes rename <from> <to> [--project|--global] [--overwrite]`
+- `pi-notes rm <name> [--project|--global] [--yes]`
 - `pi-notes uninstall [--project] [--global] [--yes]`
 
-## Examples
+CLI edit/rewrite are not provided; use interactive `/notes`. In non-interactive CLI sessions, delete/uninstall fail unless `--yes` is explicit. Failed or cancelled requested operations return a nonzero status.
 
-- `/notes setup`
-- `/notes new roadmap`
-- `/notes edit roadmap`
-- `/notes append roadmap "add launch checklist"`
-- `/notes show roadmap`
-- `/notes move roadmap --to-global --project`
-- `/notes rename roadmap roadmap-q2 --project`
-- `/notes uninstall --project`
-- `pi-notes show npm --global`
-- `pi-notes rm npm --global --yes`
+## Scope and parsing
 
-## Scope flags
-
-- `--project` -> only `.pi/notes/`
-- `--global` -> only `~/.pi/notes/`
-- no flag -> read default: project first, then global fallback
-
-## Option parsing semantics
-
-- scope flags are parsed as options only at argument edges (leading/trailing positions)
-- move flags (`--to-project`, `--to-global`, `--overwrite`) are parsed as options only for `/notes move` and only at argument edges
-- flag-like tokens in the middle of content are preserved literally
-- `--` marks end-of-options; everything after it is treated as literal content
+- `--project` selects project scope only.
+- `--global` selects global scope only.
+- No scope flag reads project first and then global; list/grep merge both with project precedence.
+- Scope flags are options only at argument edges.
+- Move destination and overwrite flags are options only at argument edges for `move`; `--overwrite` is also recognized at argument edges for `rename`.
+- `--` makes all following tokens literal.
 
 Examples:
 
-- `/notes append daily keep --global token` keeps `--global` in note content
-- `/notes append daily note --global` applies global scope option
-- `/notes grep -- --global` searches for literal `--global`
-- `/notes move handoff -- --to-global` treats `--to-global` as literal argument text
+```text
+/notes append daily keep --global token
+/notes append daily note --global
+/notes grep -- --global
+/notes move roadmap --to-global --project
+```
 
-## UX behavior
+## UX and mode matrix
 
-- `setup` ensures project/global note directories and seeds global `note.md` if missing
-- `setup` always reminds user: `Run /notes show note --global`
-- `ls` returns scope-tagged entries (`[project]` / `[global]`)
-- `show` returns scope + path + note markdown
-- `edit` opens full markdown in editor and preserves spacing/newlines/paragraphs
-- `grep` returns either matches or explicit no-match feedback
-- `rm` requires confirmation and is blocked when no UI is available
-- `rewrite` requires editor + preview + confirmation before apply
-- `move` requires explicit destination flag and supports optional `--overwrite`
-- `uninstall` defaults to project scope and requires confirmation
+| Surface | Read results | Dialog/editor | Failure behavior |
+| --- | --- | --- | --- |
+| Pi TUI | UI notification | Supported | Error/warning/cancellation notification |
+| Pi RPC | Extension UI protocol notification | Protocol request/default behavior | Protocol-visible notification |
+| Pi print | Unsupported direct command; stderr gives `pi-notes ...` | Unsupported | Observable extension error on stderr |
+| Pi JSON | Session JSON remains on stdout; stderr gives `pi-notes ...` | Unsupported | Observable extension error on stderr |
+| Agent tool | Bounded tool result | Not exposed | Throws so Pi records a tool error |
+| CLI | stdout/stderr | TTY confirmation or `--yes` for destructive actions | Nonzero exit status |
 
-## Non-interactive behavior
+Direct print/JSON `/notes` currently inherits Pi's process exit behavior, which may remain zero even though stderr contains the extension error. Scripts should invoke `pi-notes` directly for reliable output and exit status.
 
-For `/notes` in Pi, if `ctx.hasUI` is false:
-
-- `rm` is blocked with an explicit error
-- `rewrite` is blocked with an explicit error
-- `edit` is blocked with an explicit error
-- `uninstall` is blocked with an explicit error
-- `move --overwrite` confirmation flow is blocked with an explicit error
-
-For `pi-notes` CLI:
-
-- destructive operations (`rm`, `uninstall`) require interactive confirmation unless `--yes` is provided
-- if no interactive TTY and no `--yes`, destructive actions fail safely
-- CLI `edit`/`rewrite` are intentionally not provided; use interactive `/notes` for editor-based flows
-
-## Command collision note
-
-Pi may suffix duplicate command names when multiple extensions register the same command, for example `/notes:1`.
-See upstream Pi extensions docs: https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/docs/extensions.md
+Pi may suffix duplicate command names, for example `/notes:1`.

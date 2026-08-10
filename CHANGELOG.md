@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+- Symlink, wrong-type, containment, cancellation, shared-queue, headless-mode, release, and package regression coverage
+- Recoverable owner-only temporary artifacts for complete truncated tool output with 24-hour retention
+- Explicit typed command outcomes independent of UI notification severity
+
+### Changed
+- Extension storage now honors Pi's configured directory name; standalone CLI retains `.pi` compatibility
+- Extension mutations coordinate through Pi's file mutation queue; CLI/internal mutations remain process-local
+- Agent move/rename tools no longer expose overwrite and return exact human-confirmed command handoffs on conflicts
+- Print/JSON direct commands now emit an observable unsupported CLI handoff instead of silent success
+- Pi coding-agent and TypeBox imports are host-provided peers with repository-tested development versions
+- CI now uses `npm ci`; publishing now requires a published release or protected-main manual tag route with tag/version verification
+
+### Security
+- All note operations reject relevant symlinked config/storage components and entries and require canonical containment and regular path types
+- Tool cancellation is checked before queued mutation starts, preventing deferred writes after abort
+
 ## [1.0.0] - 2026-05-24
 
 ### Added

@@ -27,7 +27,7 @@ Execute in order. A ticket is complete only when its notes/evidence are current,
   - Delivers: ST-005.
   - Depends on: stable imports from preceding tickets; may start after tkt-003 if needed.
 
-- [ ] **tkt-006 — Reconcile docs and complete validation**
+- [x] **tkt-006 — Reconcile docs and complete validation**
   - Scope: README, docs, skill final pass, changelog, generated `dist/`, complete tests and smoke checks.
   - Delivers: ST-006 and final cross-ticket reconciliation.
   - Depends on: tkt-001 through tkt-005.
