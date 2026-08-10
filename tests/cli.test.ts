@@ -1,4 +1,4 @@
-import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -16,6 +16,44 @@ async function createTempWorkspace(): Promise<string> {
   process.env["HOME"] = root;
 
   return join(root, "project");
+}
+
+interface CliResult {
+  readonly code: number;
+  readonly stdout: string;
+  readonly stderr: string;
+}
+
+async function runCaptured(argv: readonly string[], cwd: string): Promise<CliResult> {
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  const code = await runCli(argv, {
+    cwd,
+    interactive: false,
+    onStdout: (message) => {
+      stdout.push(message);
+    },
+    onStderr: (message) => {
+      stderr.push(message);
+    }
+  });
+
+  return {
+    code,
+    stdout: stdout.join("\n"),
+    stderr: stderr.join("\n")
+  };
+}
+
+function projectNotePath(cwd: string, name: string): string {
+  return join(cwd, ".pi", "notes", `${name}.md`);
+}
+
+async function createProjectNote(cwd: string, name: string): Promise<string> {
+  const result = await runCaptured(["new", name], cwd);
+  expect(result.code).toBe(0);
+  expect(result.stderr).toBe("");
+  return projectNotePath(cwd, name);
 }
 
 afterEach(async () => {
@@ -45,25 +83,16 @@ describe("pi-notes CLI", () => {
     expect(isDirectCliEntry(pathToFileURL(target).href, resolve(root, "missing"))).toBe(false);
   });
 
-  it("shows usage with help", async () => {
+  it.each([
+    ["long", "--help"],
+    ["short", "-h"]
+  ])("shows usage with the %s help flag", async (_label, flag) => {
     const cwd = await createTempWorkspace();
-    const stdout: string[] = [];
-    const stderr: string[] = [];
+    const result = await runCaptured([flag], cwd);
 
-    const code = await runCli(["--help"], {
-      cwd,
-      interactive: false,
-      onStdout: (message) => {
-        stdout.push(message);
-      },
-      onStderr: (message) => {
-        stderr.push(message);
-      }
-    });
-
-    expect(code).toBe(0);
-    expect(stderr).toHaveLength(0);
-    expect(stdout.join("\n")).toContain("Usage:");
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toContain("Usage:");
   });
 
   it("supports deterministic show flow", async () => {
@@ -98,66 +127,65 @@ describe("pi-notes CLI", () => {
     expect(stdout.join("\n")).toContain("[global] npm.md");
   });
 
-  it("requires UI for destructive commands without --yes in non-interactive mode", async () => {
+  it("preserves a note when a destructive command has no force flag", async () => {
     const cwd = await createTempWorkspace();
-    const stdout: string[] = [];
-    const stderr: string[] = [];
+    const notePath = await createProjectNote(cwd, "temp-delete");
+    const before = await readFile(notePath, "utf8");
 
-    await runCli(["new", "temp-delete"], {
-      cwd,
-      interactive: false,
-      onStdout: (message) => {
-        stdout.push(message);
-      },
-      onStderr: (message) => {
-        stderr.push(message);
-      }
-    });
+    const result = await runCaptured(["rm", "temp-delete"], cwd);
 
-    const code = await runCli(["rm", "temp-delete"], {
-      cwd,
-      interactive: false,
-      onStdout: (message) => {
-        stdout.push(message);
-      },
-      onStderr: (message) => {
-        stderr.push(message);
-      }
-    });
-
-    expect(code).toBe(1);
-    expect(stderr.join("\n")).toContain("requires an interactive UI session");
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("requires an interactive UI session");
+    expect(await readFile(notePath, "utf8")).toBe(before);
   });
 
-  it("allows destructive command with --yes in non-interactive mode", async () => {
+  it.each([
+    ["leading long", ["--yes", "rm", "temp-delete"]],
+    ["leading short", ["-y", "rm", "temp-delete"]],
+    ["trailing long", ["rm", "temp-delete", "--yes"]],
+    ["trailing short", ["rm", "temp-delete", "-y"]],
+    ["repeated leading", ["--yes", "-y", "--yes", "rm", "temp-delete"]],
+    ["repeated trailing", ["rm", "temp-delete", "--yes", "-y", "--yes"]]
+  ])("allows forced deletion with %s edge flags", async (_label, argv) => {
     const cwd = await createTempWorkspace();
-    const stdout: string[] = [];
-    const stderr: string[] = [];
+    const notePath = await createProjectNote(cwd, "temp-delete");
 
-    await runCli(["new", "temp-delete"], {
-      cwd,
-      interactive: false,
-      onStdout: (message) => {
-        stdout.push(message);
-      },
-      onStderr: (message) => {
-        stderr.push(message);
-      }
-    });
+    const result = await runCaptured(argv, cwd);
 
-    const code = await runCli(["rm", "temp-delete", "--yes"], {
-      cwd,
-      interactive: false,
-      onStdout: (message) => {
-        stdout.push(message);
-      },
-      onStderr: (message) => {
-        stderr.push(message);
-      }
-    });
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toContain("Deleted [project] temp-delete.md");
+    await expect(access(notePath)).rejects.toMatchObject({ code: "ENOENT" });
+  });
 
-    expect(code).toBe(0);
-    expect(stderr).toHaveLength(0);
-    expect(stdout.join("\n")).toContain("Deleted [project] temp-delete.md");
+  it.each([
+    ["long", ["--yes", "--help", "rm", "temp-delete"]],
+    ["short and repeated", ["-y", "--yes", "-h", "--help", "rm", "temp-delete"]]
+  ])("shows help without mutation for %s mixed edge flags", async (_label, argv) => {
+    const cwd = await createTempWorkspace();
+    const notePath = await createProjectNote(cwd, "temp-delete");
+    const before = await readFile(notePath, "utf8");
+
+    const result = await runCaptured(argv, cwd);
+
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toContain("Usage:");
+    expect(result.stdout).not.toContain("Deleted");
+    expect(await readFile(notePath, "utf8")).toBe(before);
+  });
+
+  it("preserves interior flag-like tokens as command content", async () => {
+    const cwd = await createTempWorkspace();
+    const notePath = await createProjectNote(cwd, "literal-flags");
+
+    const result = await runCaptured(
+      ["append", "literal-flags", "keep", "--yes", "--mystery", "token"],
+      cwd
+    );
+
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(await readFile(notePath, "utf8")).toContain("keep --yes --mystery token");
   });
 });
