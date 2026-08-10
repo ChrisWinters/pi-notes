@@ -267,6 +267,26 @@ All linked audit gaps are represented:
 
 No implementation plan, specs, tickets, or code changes are included at this stage.
 
+## Validator repair cycle
+
+Independent validation after the initial build found four clear, local repair areas in `gaps.md`:
+
+1. Keep final tool results inside Pi's configured line/byte envelope and make private artifact expiration active rather than dependent only on a later truncation.
+2. Stabilize default-scope mutation identities so every actual source/destination remains protected by the acquired Pi/local queue keys.
+3. Make uninstall enforce the strict no-symlink/wrong-type entry policy inside a regular notes directory before recursive removal.
+4. Complete the explicit boundary matrix with final-bound assertions, broken-link coverage, scan cancellation, Pi-style queue integration/race evidence, and TUI adapter evidence.
+
+Repair intent and constraints:
+
+- Preserve all original product decisions, command grammar, note format, and human overwrite/destructive gates.
+- Prefer deterministic all-candidate locking for default-scope mutations over retrying after an unprotected winner change.
+- Keep uninstall validation no-follow and inside its mutation window; do not weaken the strict symlink policy merely because recursive `rm` normally unlinks links.
+- Preserve same-session artifact recovery. Use active expiry while the host is alive plus stale cleanup on extension registration/artifact creation, and document the residual that a stopped host cannot execute deletion until a later startup or OS temp cleanup.
+- Bound the complete model-visible result, including its recovery notice and path.
+- Add tests as repair evidence rather than changing requirements to match the first implementation.
+
+No material product question is introduced by these repairs; `open-questions.md` remains clear.
+
 ## Human review gate
 
 All material brainstorm questions have confirmed answers and `open-questions.md` is clear. The task remains in the lifecycle's `blocked` Q&A state so the human can select the next `/tasks` action; it is ready for implementation planning.
