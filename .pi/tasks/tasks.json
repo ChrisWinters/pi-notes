@@ -1,6 +1,13 @@
 {
   "version": 1,
-  "active": [],
+  "active": [
+    {
+      "slug": "2026-08-09-pi-notes-fallow-findings",
+      "state": "brainstorm",
+      "manager": "human",
+      "createdOrder": 1
+    }
+  ],
   "completed": [
     "2026-05-23-note-template-and-shortcuts",
     "2026-05-23-pi-notes-agent-tools",
