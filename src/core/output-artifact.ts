@@ -8,7 +8,7 @@ const ARTIFACT_FILE_NAME = "full-output.txt";
 /** Retain recoverable tool output for one day, then clean it on a later artifact write. */
 export const OUTPUT_ARTIFACT_RETENTION_MS = 24 * 60 * 60 * 1_000;
 
-async function cleanupExpiredArtifacts(now: number): Promise<void> {
+export async function cleanupExpiredToolOutputArtifacts(now = Date.now()): Promise<void> {
   let entries;
   try {
     entries = await readdir(tmpdir(), { withFileTypes: true });
@@ -33,9 +33,24 @@ async function cleanupExpiredArtifacts(now: number): Promise<void> {
   }));
 }
 
-export async function persistFullToolOutput(output: string): Promise<string> {
+export interface PersistFullToolOutputOptions {
+  readonly retentionMs?: number;
+}
+
+function scheduleArtifactCleanup(directory: string, retentionMs: number): void {
+  const timer = setTimeout(() => {
+    void rm(directory, { recursive: true, force: true }).catch(() => undefined);
+  }, retentionMs);
+  timer.unref();
+}
+
+export async function persistFullToolOutput(
+  output: string,
+  options: PersistFullToolOutputOptions = {}
+): Promise<string> {
   const now = Date.now();
-  await cleanupExpiredArtifacts(now);
+  const retentionMs = options.retentionMs ?? OUTPUT_ARTIFACT_RETENTION_MS;
+  await cleanupExpiredToolOutputArtifacts(now);
 
   const directory = await mkdtemp(join(tmpdir(), ARTIFACT_DIRECTORY_PREFIX));
   const path = join(directory, ARTIFACT_FILE_NAME);
@@ -48,6 +63,7 @@ export async function persistFullToolOutput(output: string): Promise<string> {
       await handle.close();
     }
     await chmod(path, 0o600);
+    scheduleArtifactCleanup(directory, retentionMs);
     return path;
   } catch (error: unknown) {
     await rm(directory, { recursive: true, force: true }).catch(() => undefined);

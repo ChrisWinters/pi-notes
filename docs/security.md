@@ -32,7 +32,7 @@ This does **not** coordinate separate CLI processes, unrelated programs, or host
 
 ## Output privacy
 
-Tool output is bounded to 2,000 lines or 50KB. Complete truncated output is written outside project/global notes to a unique OS temporary directory. On supported Unix platforms the directory is owner-only (`0700`) and file is `0600`. Artifacts are retained for 24 hours and expired artifacts are removed opportunistically on a later artifact write. Temporary-directory access remains subject to the host OS/account security model.
+Complete model-visible tool output, including its recovery notice, is bounded to 2,000 lines or 50KB. Full truncated output is written outside project/global notes to a unique OS temporary directory. On supported Unix platforms the directory is owner-only (`0700`) and file is `0600`. Deletion is scheduled after 24 hours with a timer that does not hold the host process open; extension startup and later artifact writes also reclaim stale directories. A stopped host cannot run its timer, so deletion resumes on later startup or OS temporary-directory cleanup rather than being guaranteed at an exact wall-clock instant while Pi is not running. Temporary-directory access remains subject to the host OS/account security model.
 
 No network synchronization is performed by pi-notes.
 

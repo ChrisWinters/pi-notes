@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Symlink, wrong-type, containment, cancellation, shared-queue, headless-mode, release, and package regression coverage
-- Recoverable owner-only temporary artifacts for complete truncated tool output with 24-hour retention
+- Recoverable owner-only temporary artifacts for complete truncated tool output with scheduled 24-hour and startup stale cleanup
 - Explicit typed command outcomes independent of UI notification severity
 
 ### Changed

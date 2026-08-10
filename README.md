@@ -57,7 +57,7 @@ Agent-facing tools registered by the extension:
 
 Destructive/editor flows intentionally remain command/CLI handoffs instead of agent tools. Agent move/rename tools expose no overwrite option; conflicts return the exact `/notes ... --overwrite` command for the user to run and confirm.
 
-List/show/grep tool output is bounded to 2,000 lines or 50KB. Complete truncated results are stored in owner-only OS temporary artifacts for 24 hours and their path is returned in the tool result.
+List/show/grep tool output, including its recovery notice, is bounded to 2,000 lines or 50KB. Complete truncated results use owner-only OS temporary artifacts scheduled for deletion after 24 hours; stale artifacts are also reclaimed on later extension startup/output creation.
 
 Package CLI (deterministic non-interactive flows):
 

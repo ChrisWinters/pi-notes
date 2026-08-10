@@ -1,10 +1,16 @@
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, stat, utimes } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import {
+  DEFAULT_MAX_BYTES,
+  DEFAULT_MAX_LINES,
+  type ExtensionAPI,
+  type ExtensionContext
+} from "@earendil-works/pi-coding-agent";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { OUTPUT_ARTIFACT_RETENTION_MS, persistFullToolOutput } from "../src/core/output-artifact.js";
 import registerPiNotesExtension, {
   createNotesMoveDestinationParameterSchema,
   createNotesScopeParameterSchema,
@@ -276,6 +282,26 @@ describe("pi-notes tools", () => {
     expect(list.text).not.toContain("cancelled.md");
   });
 
+  it("cleans stale output artifacts during extension registration", async () => {
+    const path = await persistFullToolOutput("stale startup output");
+    const directory = dirname(path);
+    const expiredAt = new Date(Date.now() - OUTPUT_ARTIFACT_RETENTION_MS - 60_000);
+    await utimes(directory, expiredAt, expiredAt);
+
+    const { api } = createExtensionApi();
+    registerPiNotesExtension(api);
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      try {
+        await access(path);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      } catch {
+        break;
+      }
+    }
+
+    await expect(access(path)).rejects.toThrow();
+  });
+
   it("rejects headless direct commands with an observable CLI handoff", async () => {
     const cwd = await createTempCwd();
     const { api, commands } = createExtensionApi();
@@ -339,7 +365,9 @@ describe("pi-notes tools", () => {
     expect(shown.text).toContain("[Output truncated:");
     expect(shown.text).toContain("Full output saved to:");
     expect(shown.text).not.toContain("line-2099");
-    expect(shown.details.truncation).toMatchObject({ truncated: true, outputLines: 2_000 });
+    expect(shown.details.truncation).toMatchObject({ truncated: true });
+    expect(shown.text.split("\n").length).toBeLessThanOrEqual(DEFAULT_MAX_LINES);
+    expect(Buffer.byteLength(shown.text, "utf8")).toBeLessThanOrEqual(DEFAULT_MAX_BYTES);
     expect(shown.details.artifactRetentionMs).toBe(86_400_000);
 
     const fullOutputPath = shown.details.fullOutputPath;

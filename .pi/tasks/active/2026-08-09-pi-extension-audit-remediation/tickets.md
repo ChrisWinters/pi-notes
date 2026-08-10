@@ -37,7 +37,7 @@ Execute in order. A ticket is complete only when its notes/evidence are current,
   - Delivers: ST-007 and repairs GAP-002/GAP-003.
   - Depends on: tkt-001/tkt-002 foundations.
 
-- [ ] **tkt-008 — Bound complete output and actively expire artifacts**
+- [x] **tkt-008 — Bound complete output and actively expire artifacts**
   - Scope: `src/index.ts`, `src/core/output-artifact.ts`, output/artifact tests and accurate docs.
   - Delivers: ST-008 and repairs GAP-001.
   - Depends on: tkt-004 output adapter.

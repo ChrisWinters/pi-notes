@@ -26,6 +26,13 @@ describe("full tool output artifacts", () => {
     }
   });
 
+  it("deletes an artifact at its deadline while the host remains alive", async () => {
+    const path = await persistFullToolOutput("short-lived", { retentionMs: 20 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    await expect(access(path)).rejects.toThrow();
+  });
+
   it("removes expired artifacts on a later artifact write", async () => {
     const expiredPath = await persistFullToolOutput("expired");
     const expiredDirectory = dirname(expiredPath);

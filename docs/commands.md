@@ -29,7 +29,7 @@ Delete, uninstall, edit, rewrite, and overwrite confirmation are intentionally n
 /notes move source --to-global --project --overwrite
 ```
 
-The user must run and confirm that command. List/show/grep output is limited to 2,000 lines or 50KB. When truncated, the result includes a private full-output artifact path and structured truncation metadata; the artifact is retained for 24 hours.
+The user must run and confirm that command. The complete list/show/grep result text, including its recovery notice, is limited to 2,000 lines or 50KB. When truncated, the result includes a private full-output artifact path and structured truncation metadata. Deletion is scheduled after 24 hours while the host is alive; stale files are also reclaimed on later extension startup/output creation.
 
 ## CLI
 

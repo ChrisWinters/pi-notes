@@ -15,7 +15,11 @@ import { Type, type Static, type TSchema, type TUnsafe } from "typebox";
 import type { NotesCommandStatus, NotesNotifyLevel } from "./commands/context.js";
 import { handleNotesCommand, handleNotesCommandArgv } from "./commands/notes.js";
 import { createQueuedMutationCoordinator } from "./core/mutation.js";
-import { OUTPUT_ARTIFACT_RETENTION_MS, persistFullToolOutput } from "./core/output-artifact.js";
+import {
+  OUTPUT_ARTIFACT_RETENTION_MS,
+  cleanupExpiredToolOutputArtifacts,
+  persistFullToolOutput
+} from "./core/output-artifact.js";
 
 const NOTES_SETUP_TOOL_NAME = "notes_setup";
 const NOTES_LIST_TOOL_NAME = "notes_list";
@@ -30,7 +34,7 @@ const piMutationCoordinator = createQueuedMutationCoordinator(withFileMutationQu
 
 const NOTES_SCOPE_VALUES = ["default", "project", "global"] as const;
 const NOTES_MOVE_DESTINATION_VALUES = ["project", "global"] as const;
-const OUTPUT_LIMIT_DESCRIPTION = `Output is truncated to ${DEFAULT_MAX_LINES} lines or ${formatSize(DEFAULT_MAX_BYTES)}; complete truncated output is retained in an owner-only temporary artifact for 24 hours.`;
+const OUTPUT_LIMIT_DESCRIPTION = `Output is truncated to ${DEFAULT_MAX_LINES} lines or ${formatSize(DEFAULT_MAX_BYTES)}; complete truncated output uses an owner-only temporary artifact scheduled for deletion after 24 hours.`;
 
 type NotesToolScope = (typeof NOTES_SCOPE_VALUES)[number];
 type NotesMoveDestination = (typeof NOTES_MOVE_DESTINATION_VALUES)[number];
@@ -148,13 +152,22 @@ async function executeNotesTool(
     throw new Error(`${rawText}${overwriteHandoff}`);
   }
 
-  const truncation = truncateHead(rawText, {
+  const initialTruncation = truncateHead(rawText, {
     maxBytes: DEFAULT_MAX_BYTES,
     maxLines: DEFAULT_MAX_LINES
   });
-  if (truncation.truncated) {
+  if (initialTruncation.truncated) {
     const fullOutputPath = await persistFullToolOutput(rawText);
-    const text = `${truncation.content}\n\n[Output truncated: ${truncation.outputLines} of ${truncation.totalLines} lines, ${truncation.outputBytes} of ${truncation.totalBytes} bytes. Full output saved to: ${fullOutputPath}]`;
+    const notice = `\n\n[Output truncated: Full output saved to: ${fullOutputPath}]`;
+    const noticeBytes = Buffer.byteLength(notice, "utf8");
+    if (noticeBytes >= DEFAULT_MAX_BYTES) {
+      throw new Error("Temporary output artifact path is too long for a bounded tool result.");
+    }
+    const truncation = truncateHead(rawText, {
+      maxBytes: DEFAULT_MAX_BYTES - noticeBytes,
+      maxLines: DEFAULT_MAX_LINES - 2
+    });
+    const text = `${truncation.content}${notice}`;
     return {
       content: [{ type: "text", text }],
       details: {
@@ -170,7 +183,7 @@ async function executeNotesTool(
   }
 
   return {
-    content: [{ type: "text", text: truncation.content }],
+    content: [{ type: "text", text: initialTruncation.content }],
     details: {
       tool,
       argv,
@@ -323,6 +336,8 @@ function registerPiNotesTools(pi: ExtensionAPI): void {
 }
 
 export default function registerPiNotesExtension(pi: ExtensionAPI): void {
+  void cleanupExpiredToolOutputArtifacts();
+
   pi.registerCommand("notes", {
     description: "Manage notes in project (.pi/notes) or global (~/.pi/notes) scope",
     handler: async (args, ctx) => {
