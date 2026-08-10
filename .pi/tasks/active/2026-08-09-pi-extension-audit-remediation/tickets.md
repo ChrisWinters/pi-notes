@@ -12,7 +12,7 @@ Execute in order. A ticket is complete only when its notes/evidence are current,
   - Delivers: ST-002; Pi shared queue integration, deterministic multi-key ordering, local CLI queue, abort propagation.
   - Depends on: tkt-001 safe path identity.
 
-- [ ] **tkt-003 — Add typed outcomes and truthful tool contracts**
+- [x] **tkt-003 — Add typed outcomes and truthful tool contracts**
   - Scope: command result model, handlers/adapters, CLI, tools, bundled skill, focused tests.
   - Delivers: ST-003; error signaling independent of notification level; no agent overwrite; exact conflict handoffs.
   - Depends on: tkt-001 and tkt-002 operation contexts.

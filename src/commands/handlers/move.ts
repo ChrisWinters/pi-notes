@@ -1,5 +1,5 @@
 import type { NotesScope } from "../../core/storage.js";
-import type { NotesCommandContext } from "../context.js";
+import { notifyCancelled, notifyFailure, type NotesCommandContext } from "../context.js";
 import { renderScopeLabel } from "../../ui/render.js";
 import { requireHasUi } from "../shared.js";
 import type { NotesHandler } from "./types.js";
@@ -10,12 +10,12 @@ function resolveDestinationScope(
   ctx: NotesCommandContext
 ): NotesScope | null {
   if (!toProject && !toGlobal) {
-    ctx.ui.notify("Missing move destination. Use --to-project or --to-global.", "error");
+    notifyFailure(ctx, "Missing move destination. Use --to-project or --to-global.");
     return null;
   }
 
   if (toProject && toGlobal) {
-    ctx.ui.notify("Move destination flags conflict: choose either --to-project or --to-global.", "error");
+    notifyFailure(ctx, "Move destination flags conflict: choose either --to-project or --to-global.");
     return null;
   }
 
@@ -25,7 +25,7 @@ function resolveDestinationScope(
 export const handleMove: NotesHandler = async ({ args, moveSelection, scopeSelection, storage, ctx }) => {
   const [name] = args;
   if (name === undefined) {
-    ctx.ui.notify("Missing note name for /notes move.", "error");
+    notifyFailure(ctx, "Missing note name for /notes move.");
     return;
   }
 
@@ -36,12 +36,12 @@ export const handleMove: NotesHandler = async ({ args, moveSelection, scopeSelec
 
   const source = await storage.readNote(name, scopeSelection);
   if (source === null) {
-    ctx.ui.notify(`Note not found: ${name}`, "warning");
+    notifyFailure(ctx, `Note not found: ${name}`, "warning");
     return;
   }
 
   if (source.scope === destinationScope) {
-    ctx.ui.notify(`Note already in ${renderScopeLabel(source.scope)} scope: ${source.fileName}`, "info");
+    notifyFailure(ctx, `Note already in ${renderScopeLabel(source.scope)} scope: ${source.fileName}`, "warning");
     return;
   }
 
@@ -56,7 +56,7 @@ export const handleMove: NotesHandler = async ({ args, moveSelection, scopeSelec
     );
 
     if (!confirmed) {
-      ctx.ui.notify("Move cancelled.", "info");
+      notifyCancelled(ctx, "Move cancelled.");
       return;
     }
   }

@@ -1,17 +1,18 @@
 import { renderScopeLabel } from "../../ui/render.js";
 import { nowIso } from "../shared.js";
+import { notifyFailure } from "../context.js";
 import type { NotesHandler } from "./types.js";
 
 export const handleAppend: NotesHandler = async ({ args, storage, scopeSelection, ctx }) => {
   const [name, ...textParts] = args;
   if (name === undefined) {
-    ctx.ui.notify("Missing note name for /notes append.", "error");
+    notifyFailure(ctx, "Missing note name for /notes append.");
     return;
   }
 
   const text = textParts.join(" ").trim();
   if (text.length === 0) {
-    ctx.ui.notify("Missing append text for /notes append.", "error");
+    notifyFailure(ctx, "Missing append text for /notes append.");
     return;
   }
 

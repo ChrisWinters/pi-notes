@@ -101,10 +101,11 @@ For note updates/mutations:
 4. Use the matching `notes_*` tool.
 5. Report the outcome briefly.
 
-For overwrite-capable operations (`notes_rename`, `notes_move`):
+For rename/move destination conflicts:
 
-- Use `overwrite: true` only when the user explicitly asked to overwrite or confirmed it.
-- Otherwise leave overwrite omitted/false and let the tool report conflicts.
+- Do not attempt an overwrite through `notes_rename` or `notes_move`; those tools intentionally expose no overwrite parameter.
+- Return the tool's exact interactive `/notes ... --overwrite` handoff to the user.
+- Only the user may run that destructive command and confirm the overwrite.
 
 ## Fallback clarification prompts
 

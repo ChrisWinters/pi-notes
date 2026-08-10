@@ -10,7 +10,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Type, type Static, type TSchema, type TUnsafe } from "typebox";
 
-import type { NotesNotifyLevel } from "./commands/context.js";
+import type { NotesCommandStatus, NotesNotifyLevel } from "./commands/context.js";
 import { handleNotesCommand, handleNotesCommandArgv } from "./commands/notes.js";
 import { createQueuedMutationCoordinator } from "./core/mutation.js";
 
@@ -40,6 +40,7 @@ interface NotesToolDetails {
   readonly tool: string;
   readonly argv: readonly string[];
   readonly ok: boolean;
+  readonly status: NotesCommandStatus;
   readonly messages: readonly NotesToolMessage[];
 }
 
@@ -113,7 +114,7 @@ async function executeNotesTool(
 ): Promise<NotesToolResult> {
   const messages: NotesToolMessage[] = [];
 
-  await handleNotesCommandArgv(argv, {
+  const outcome = await handleNotesCommandArgv(argv, {
     cwd: ctx.cwd,
     configDirName: CONFIG_DIR_NAME,
     mutationCoordinator: piMutationCoordinator,
@@ -128,13 +129,17 @@ async function executeNotesTool(
     }
   });
 
-  const ok = messages.every((message) => message.level !== "error");
+  const ok = outcome.status === "success";
   const rawText = messages.length > 0
     ? messages.map((message) => message.message).join("\n")
     : "No output from notes command.";
 
   if (!ok) {
-    throw new Error(rawText);
+    const overwriteHandoff = rawText.includes("Destination already has note:")
+      && (tool === NOTES_MOVE_TOOL_NAME || tool === NOTES_RENAME_TOOL_NAME)
+      ? `\nTo overwrite interactively, run: /notes ${argv.map(formatCommandToken).join(" ")} --overwrite`
+      : "";
+    throw new Error(`${rawText}${overwriteHandoff}`);
   }
 
   const truncation = truncateHead(rawText, {
@@ -151,6 +156,7 @@ async function executeNotesTool(
       tool,
       argv,
       ok,
+      status: outcome.status,
       messages
     }
   };
@@ -176,15 +182,17 @@ const GrepParameters = Type.Object({
 const RenameParameters = Type.Object({
   fromName: Type.String({ description: "Current note name." }),
   toName: Type.String({ description: "New note name." }),
-  scope: Type.Optional(createNotesScopeParameterSchema()),
-  overwrite: Type.Optional(Type.Boolean({ description: "Overwrite an existing destination note." }))
+  scope: Type.Optional(createNotesScopeParameterSchema())
 });
 const MoveParameters = Type.Object({
   name: Type.String({ description: "Note name." }),
   destination: createNotesMoveDestinationParameterSchema(),
-  scope: Type.Optional(createNotesScopeParameterSchema()),
-  overwrite: Type.Optional(Type.Boolean({ description: "Overwrite an existing destination note." }))
+  scope: Type.Optional(createNotesScopeParameterSchema())
 });
+
+function formatCommandToken(token: string): string {
+  return /^[a-zA-Z0-9._/-]+$/.test(token) ? token : JSON.stringify(token);
+}
 
 function registerNotesTool<TParams extends TSchema>(
   pi: ExtensionAPI,
@@ -275,14 +283,11 @@ function registerPiNotesTools(pi: ExtensionAPI): void {
   registerNotesTool(pi, {
     name: NOTES_RENAME_TOOL_NAME,
     label: "Rename Note",
-    description: "Rename a note with optional overwrite behavior.",
+    description: "Rename a note. Overwrite conflicts require an interactive /notes command.",
     promptSnippet: "Rename a pi-notes note.",
     promptGuidelines: ["Use notes_rename when the user asks to rename a note and source, destination, and scope are clear."],
     parameters: RenameParameters,
-    toArgv: (params) => {
-      const argv = applyScope(["rename", params.fromName, params.toName], params.scope);
-      return params.overwrite === true ? [...argv, "--overwrite"] : argv;
-    }
+    toArgv: (params) => applyScope(["rename", params.fromName, params.toName], params.scope)
   });
 
   registerNotesTool(pi, {
@@ -294,8 +299,7 @@ function registerPiNotesTools(pi: ExtensionAPI): void {
     parameters: MoveParameters,
     toArgv: (params) => {
       const destinationFlag = params.destination === "project" ? "--to-project" : "--to-global";
-      const argv = applyScope(["move", params.name, destinationFlag], params.scope);
-      return params.overwrite === true ? [...argv, "--overwrite"] : argv;
+      return applyScope(["move", params.name, destinationFlag], params.scope);
     }
   });
 }

@@ -1,11 +1,12 @@
 import { renderScopeLabel } from "../../ui/render.js";
+import { notifyCancelled, notifyFailure } from "../context.js";
 import { requireHasUi } from "../shared.js";
 import type { NotesHandler } from "./types.js";
 
 export const handleRename: NotesHandler = async ({ args, moveSelection, scopeSelection, storage, ctx }) => {
   const [fromName, toName] = args;
   if (fromName === undefined || toName === undefined) {
-    ctx.ui.notify("Usage: /notes rename <from> <to> [--project|--global] [--overwrite]", "error");
+    notifyFailure(ctx, "Usage: /notes rename <from> <to> [--project|--global] [--overwrite]");
     return;
   }
 
@@ -20,7 +21,7 @@ export const handleRename: NotesHandler = async ({ args, moveSelection, scopeSel
     );
 
     if (!confirmed) {
-      ctx.ui.notify("Rename cancelled.", "info");
+      notifyCancelled(ctx, "Rename cancelled.");
       return;
     }
   }

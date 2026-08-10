@@ -1,5 +1,5 @@
 import type { NotesScope, ScopeSelection } from "../core/storage.js";
-import type { NotesCommandContext } from "./context.js";
+import { notifyFailure, type NotesCommandContext } from "./context.js";
 import { resolveScopePreference } from "../core/storage.js";
 
 export const NOTES_USAGE = [
@@ -39,7 +39,7 @@ export function requireHasUi(ctx: NotesCommandContext): boolean {
     return true;
   }
 
-  ctx.ui.notify("This subcommand requires an interactive UI session.", "error");
+  notifyFailure(ctx, "This subcommand requires an interactive UI session.");
   return false;
 }
 

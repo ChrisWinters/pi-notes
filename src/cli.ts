@@ -135,8 +135,8 @@ export async function runCli(argv: readonly string[], options: CliRunOptions = {
     }
   };
 
-  await handleNotesCommandArgv(parsed.commandTokens, context);
-  return hadError ? 1 : 0;
+  const outcome = await handleNotesCommandArgv(parsed.commandTokens, context);
+  return hadError || outcome.status !== "success" ? 1 : 0;
 }
 
 if (isDirectCliEntry(import.meta.url, process.argv[1])) {

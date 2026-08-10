@@ -1,5 +1,6 @@
 import { renderScopeLabel } from "../../ui/render.js";
 import { requireHasUi } from "../shared.js";
+import { notifyCancelled, notifyFailure } from "../context.js";
 import type { NotesHandler } from "./types.js";
 
 export const handleUninstall: NotesHandler = async ({ scopeSelection, storage, ctx }) => {
@@ -16,7 +17,7 @@ export const handleUninstall: NotesHandler = async ({ scopeSelection, storage, c
   }
 
   if (pending.length === 0) {
-    ctx.ui.notify("No uninstall target selected.", "error");
+    notifyFailure(ctx, "No uninstall target selected.");
     return;
   }
 
@@ -31,7 +32,7 @@ export const handleUninstall: NotesHandler = async ({ scopeSelection, storage, c
   );
 
   if (!confirmed) {
-    ctx.ui.notify("Uninstall cancelled.", "info");
+    notifyCancelled(ctx, "Uninstall cancelled.");
     return;
   }
 

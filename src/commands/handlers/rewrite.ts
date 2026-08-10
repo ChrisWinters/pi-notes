@@ -1,23 +1,24 @@
 import { renderRewritePreview, renderScopeLabel } from "../../ui/render.js";
+import { notifyCancelled, notifyFailure } from "../context.js";
 import { nowIso, requireHasUi } from "../shared.js";
 import type { NotesHandler } from "./types.js";
 
 export const handleRewrite: NotesHandler = async ({ args, storage, scopeSelection, ctx }) => {
   const [name, ...instructionParts] = args;
   if (name === undefined) {
-    ctx.ui.notify("Missing note name for /notes rewrite.", "error");
+    notifyFailure(ctx, "Missing note name for /notes rewrite.");
     return;
   }
 
   const instruction = instructionParts.join(" ").trim();
   if (instruction.length === 0) {
-    ctx.ui.notify("Missing rewrite instruction for /notes rewrite.", "error");
+    notifyFailure(ctx, "Missing rewrite instruction for /notes rewrite.");
     return;
   }
 
   const target = await storage.readNote(name, scopeSelection);
   if (target === null) {
-    ctx.ui.notify(`Note not found: ${name}`, "warning");
+    notifyFailure(ctx, `Note not found: ${name}`, "warning");
     return;
   }
 
@@ -27,7 +28,7 @@ export const handleRewrite: NotesHandler = async ({ args, storage, scopeSelectio
 
   const proposedMarkdown = await ctx.ui.editor(`Rewrite proposal for ${target.fileName}`, target.markdown);
   if (proposedMarkdown === undefined) {
-    ctx.ui.notify("Rewrite cancelled.", "info");
+    notifyCancelled(ctx, "Rewrite cancelled.");
     return;
   }
 
@@ -39,7 +40,7 @@ export const handleRewrite: NotesHandler = async ({ args, storage, scopeSelectio
   );
 
   if (!confirmed) {
-    ctx.ui.notify("Rewrite cancelled.", "info");
+    notifyCancelled(ctx, "Rewrite cancelled.");
     return;
   }
 

@@ -140,6 +140,8 @@ describe("pi-notes tools", () => {
     expect(tools.has("notes_uninstall")).toBe(false);
     expect(tools.has("notes_edit")).toBe(false);
     expect(tools.has("notes_rewrite")).toBe(false);
+    expect(getTool(tools, "notes_move").parameters).not.toHaveProperty("properties.overwrite");
+    expect(getTool(tools, "notes_rename").parameters).not.toHaveProperty("properties.overwrite");
   });
 
   it("creates and shows a project note", async () => {
@@ -200,6 +202,28 @@ describe("pi-notes tools", () => {
     expect(moved.details.ok).toBe(true);
     expect(moved.details.argv).toEqual(["move", "renamed", "--to-global", "--project"]);
     expect(shown.text).toContain("# source");
+  });
+
+  it("throws for missing notes even when interactive presentation is a warning", async () => {
+    const cwd = await createTempCwd();
+    const { api, tools } = createExtensionApi();
+    registerPiNotesExtension(api);
+
+    await expect(executeTool(tools, "notes_show", { name: "missing", scope: "project" }, cwd)).rejects.toThrow(
+      "Note not found: missing"
+    );
+  });
+
+  it("returns exact interactive overwrite handoffs for conflicts", async () => {
+    const cwd = await createTempCwd();
+    const { api, tools } = createExtensionApi();
+    registerPiNotesExtension(api);
+    await executeTool(tools, "notes_new", { name: "source", scope: "project" }, cwd);
+    await executeTool(tools, "notes_new", { name: "target", scope: "project" }, cwd);
+
+    await expect(
+      executeTool(tools, "notes_rename", { fromName: "source", toName: "target", scope: "project" }, cwd)
+    ).rejects.toThrow("/notes rename source target --project --overwrite");
   });
 
   it("runs setup and throws handler errors", async () => {

@@ -1,10 +1,11 @@
 import { renderGrepResults } from "../../ui/render.js";
+import { notifyFailure } from "../context.js";
 import type { NotesHandler } from "./types.js";
 
 export const handleGrep: NotesHandler = async ({ args, storage, scopeSelection, ctx }) => {
   const query = args.join(" ").trim();
   if (query.length === 0) {
-    ctx.ui.notify("Missing query for /notes grep.", "error");
+    notifyFailure(ctx, "Missing query for /notes grep.");
     return;
   }
 

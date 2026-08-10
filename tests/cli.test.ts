@@ -127,6 +127,14 @@ describe("pi-notes CLI", () => {
     expect(stdout.join("\n")).toContain("[global] npm.md");
   });
 
+  it("returns a nonzero status for a missing requested note", async () => {
+    const cwd = await createTempWorkspace();
+    const result = await runCaptured(["show", "missing", "--project"], cwd);
+
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain("Note not found: missing");
+  });
+
   it("preserves a note when a destructive command has no force flag", async () => {
     const cwd = await createTempWorkspace();
     const notePath = await createProjectNote(cwd, "temp-delete");
