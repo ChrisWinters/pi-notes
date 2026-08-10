@@ -23,6 +23,10 @@ pi-notes currently follows symlinked note paths, uses a private mutation queue t
 8. Extension mode honors `CONFIG_DIR_NAME`; CLI keeps `.pi` default with only a validated explicit override.
 9. Package peers, lockfile, CI, and publish workflow follow current Pi and repository release contracts.
 10. Tests, docs, skill guidance, changelog, and generated output match shipped behavior.
+11. Default-scope mutations cannot switch to an unacquired project/global path while waiting for a queue.
+12. Uninstall rejects internal symlink/broken-link/wrong-type entries before removing any part of the scope.
+13. Complete tool result text stays inside Pi limits, and artifact cleanup runs at deadline while live plus on later startup.
+14. Broken-link, scan-abort, Pi-style queue-race, and TUI adapter boundaries have deterministic evidence.
 
 ## Explicit exclusions
 

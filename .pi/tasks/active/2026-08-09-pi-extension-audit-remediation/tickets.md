@@ -31,3 +31,18 @@ Execute in order. A ticket is complete only when its notes/evidence are current,
   - Scope: README, docs, skill final pass, changelog, generated `dist/`, complete tests and smoke checks.
   - Delivers: ST-006 and final cross-ticket reconciliation.
   - Depends on: tkt-001 through tkt-005.
+
+- [ ] **tkt-007 — Stabilize queued identities and strict uninstall scanning**
+  - Scope: `src/core/storage.ts`, mutation hooks/coordinator tests, storage security tests.
+  - Delivers: ST-007 and repairs GAP-002/GAP-003.
+  - Depends on: tkt-001/tkt-002 foundations.
+
+- [ ] **tkt-008 — Bound complete output and actively expire artifacts**
+  - Scope: `src/index.ts`, `src/core/output-artifact.ts`, output/artifact tests and accurate docs.
+  - Delivers: ST-008 and repairs GAP-001.
+  - Depends on: tkt-004 output adapter.
+
+- [ ] **tkt-009 — Complete boundary proof and repair reconciliation**
+  - Scope: broken-link, scan-abort, Pi-style queue, TUI adapter tests; docs/evidence/final gates.
+  - Delivers: ST-009 and repairs GAP-004 plus cross-gap final evidence.
+  - Depends on: tkt-007 and tkt-008.

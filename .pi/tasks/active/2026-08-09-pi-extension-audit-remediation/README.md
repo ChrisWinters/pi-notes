@@ -13,6 +13,9 @@ This active task remediates the findings in `.pi/tasks/audits/2026-08-09-pi-note
 4. `tkt-004` — recover truncated output and fix mode observability
 5. `tkt-005` — align package, CI, and release contracts
 6. `tkt-006` — reconcile documentation and run final validation
+7. `tkt-007` — stabilize queued identities and strict uninstall scanning
+8. `tkt-008` — bound complete tool output and actively expire artifacts
+9. `tkt-009` — complete boundary proof and repair reconciliation
 
 ## Contracts
 

@@ -176,8 +176,39 @@ Focused commands may run per ticket. Optional fallow analysis may be used becaus
 - `tkt-004`: truncation/modes.
 - `tkt-005`: package/release.
 - `tkt-006`: docs/build/final reconciliation.
+- `tkt-007`: stabilize mutation keys and strict uninstall scanning.
+- `tkt-008`: bound final output and actively expire artifacts.
+- `tkt-009`: complete boundary evidence and repair reconciliation.
 
 Each ticket must update `notes.md`, `evidence.md`, `tickets.md`, and commit a coherent slice. Source changes and their focused tests belong in the same ticket.
+
+## 12.1 Validator repair requirements
+
+### Stable mutation identities
+
+- Default-scope append/delete/move/rename must acquire every possible project/global source identity before selecting the winner inside the queue.
+- Move must also acquire its explicit destination path; rename must acquire destination paths corresponding to every possible source scope.
+- The implementation must never mutate a path absent from the acquired key set, including when the project/global winner changes while waiting.
+- A deterministic test must hold queue acquisition, change the winner, and prove the eventual source/destination keys were already acquired.
+
+### Strict uninstall traversal
+
+- Before recursive scope removal, the implementation must recursively inspect the regular notes tree inside the protected window using no-follow metadata.
+- Any symlink, broken symlink, or wrong-type filesystem entry must reject uninstall before any entry is removed.
+- Tests must cover internal links for project and global scope and prove external targets and the notes tree remain unchanged.
+
+### Bounded result and artifact expiry
+
+- The complete returned tool text, including recovery notice/path, must not exceed `DEFAULT_MAX_LINES` or `DEFAULT_MAX_BYTES`.
+- Newly created artifacts must schedule deadline deletion while the process remains alive without keeping the process alive.
+- Expired artifacts must also be reclaimed during extension registration/startup and before new artifact writes.
+- Documentation must state the residual honestly: a stopped host cannot execute scheduled cleanup; stale cleanup resumes at later startup and the OS may independently clean temporary files.
+- Tests must assert final result bounds, scheduled deletion, and startup cleanup.
+
+### Missing boundary evidence
+
+- Add deterministic broken-link rejection, scan-phase cancellation, Pi-style queue integration/race, and TUI adapter success/error/no-duplicate coverage.
+- Mode tests remain offline and credential-free.
 
 ## 13. Risks and assumptions
 
@@ -192,7 +223,7 @@ Open questions: none.
 
 ## 14. Definition of done
 
-- All six tickets are checked and have evidence/commits.
+- All nine tickets are checked and have evidence/commits.
 - Every story acceptance criterion is met.
 - The exploit and all audited boundary regressions are covered and pass.
 - Required validation and offline smoke checks pass.
