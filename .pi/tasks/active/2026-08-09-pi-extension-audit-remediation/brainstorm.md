@@ -11,7 +11,7 @@
 
 Remediate the full 2026-08-09 Pi extension audit as one coherent reliability and release-hardening effort. The package should make its filesystem boundary real, follow current Pi extension/package contracts, expose truthful tool and mode behavior, validate those contracts at Pi boundaries, and align documentation and release automation with what actually ships.
 
-The audit is the source of identified gaps, not an implementation prescription. Where the audit offers alternatives, this brainstorm records the tradeoff and carries the material decision into `open-questions.md` rather than silently choosing product behavior.
+The audit is the source of identified gaps, not an implementation prescription. Where the audit offered alternatives, the tradeoffs were reviewed through `open-questions.md`; the confirmed choices are recorded below.
 
 ## Source context read
 
@@ -56,6 +56,15 @@ Relevant implementation surfaces identified by the audit include `src/core/stora
 - Preserve the required validation gate: lint, typecheck, test, build.
 - Do not add publishing, pushing, or unrelated CI behavior beyond the audited release corrections.
 
+## Confirmed decisions
+
+1. Reject symlinked config/storage directory components and note entries, including symlinks that resolve inside the intended root.
+2. Remove `overwrite` from `notes_move` and `notes_rename`; hand destination conflicts to the user with exact interactive `/notes ... --overwrite` commands.
+3. Prefer observable, mode-safe `/notes` results in print/JSON when Pi APIs can provide them without duplicate output or model-context pollution. Prototype that boundary; if it is not safe, emit an observable unsupported result and document the CLI as the headless interface.
+4. Keep `.pi` as the standalone CLI default, inject Pi's `CONFIG_DIR_NAME` in extension mode, and allow only a narrowly validated explicit CLI override that avoids ambiguous migration behavior.
+5. Store complete truncated output in owner-only OS temporary files with bounded retention sufficient for a follow-up read in the current session; never retain indefinitely or place artifacts in project storage.
+6. Publish from `release.published` and protected `workflow_dispatch`, verify tag/version agreement, and use a protected GitHub environment when repository settings support it.
+
 ## Findings-driven brainstorming
 
 ### 1. Security: enforce the notes-root filesystem boundary
@@ -72,7 +81,7 @@ The safety model needs explicit invariants:
 - Recursive scope removal must delete only the intended notes directory entry and never traverse an aliased external tree.
 - Setup must not create directories or starter content through redirected components.
 
-The safest default is to reject symlinked storage components and note entries rather than permit symlinks that happen to resolve inside the root. That rule is easier to explain, test, and preserve across platforms, but it is a material compatibility decision because a user may intentionally symlink a notes directory. The alternative is canonical containment with carefully defined handling for non-existent destinations and race-resistant open operations. This decision is open.
+The confirmed policy is to reject symlinked storage components and note entries rather than permit symlinks that happen to resolve inside the root. This intentionally favors a strict, explainable regular-directory/regular-file contract over compatibility with intentionally symlinked note storage. Canonical containment and race-resistant operations are still required in addition to rejection checks.
 
 Security tests should use temporary directories and cover file symlinks, directory symlinks, broken symlinks, destination symlinks, and component replacement races where deterministic hooks make those races testable. Platform-specific limitations should be explicit rather than silently skipping the entire safety contract.
 
@@ -85,7 +94,7 @@ Potential recovery designs:
 - Write full rendered output to a secure temporary file and return its path plus truncation metadata. This follows the current Pi example and is the lowest-risk alignment choice.
 - Add continuation/pagination parameters to read/list/search tools. This avoids temporary-file lifecycle concerns but is a broader tool API and storage-query design change.
 
-The audit is remediation-focused, so a secure temporary artifact is the narrowest initial fix. Open details include retention and cleanup: process-exit cleanup risks deleting before a later tool read, while indefinite temp retention creates privacy and disk concerns. A bounded age policy or OS temp lifecycle may be appropriate. The tool result should disclose line/byte limits and the artifact path, and `details` should expose structured truncation metadata for renderers/RPC clients.
+The confirmed direction is a secure, owner-only OS temporary artifact with bounded retention long enough for a follow-up read in the current session. It must not be retained indefinitely or written inside project storage. Planning should define the deterministic cleanup mechanism while preserving this product constraint. The tool result should disclose line/byte limits and the artifact path, and `details` should expose structured truncation metadata for renderers/RPC clients.
 
 Only commands capable of large output need limit language, but a shared adapter may make consistent descriptions simpler.
 
@@ -108,7 +117,7 @@ A package dry-run should verify that no unintended nested core runtime is bundle
 
 `overwrite` is exposed for `notes_move` and `notes_rename`, but tool execution is deliberately non-UI and therefore always blocks that parameter. The current skill simultaneously tells the agent to use it after confirmation, producing a guaranteed failure.
 
-The recommended product posture is to remove overwrite from agent tool schemas. On a destination conflict, the tool should explain the exact `/notes move ... --overwrite` or `/notes rename ... --overwrite` command the user can run interactively. This matches the existing destructive handoff for remove/uninstall and keeps agent tools safely non-destructive. An alternative explicit-authorization design would enlarge the security surface and needs a strong reason; no such requirement appears in the audit.
+The confirmed product posture is to remove overwrite from agent tool schemas. On a destination conflict, the tool should explain the exact `/notes move ... --overwrite` or `/notes rename ... --overwrite` command the user can run interactively. This matches the existing destructive handoff for remove/uninstall and keeps agent tools safely non-destructive. An agent-side explicit-authorization design is out of scope.
 
 #### Failure outcomes
 
@@ -155,12 +164,7 @@ A cancelled operation must not report success and must not start a mutation afte
 
 The `/notes` command is observable in TUI and RPC because UI methods work there, but silent in print and JSON because notifications are no-ops. Exit success with no result is a poor automation contract.
 
-Two viable product directions exist:
-
-1. Make direct extension commands emit mode-safe session/messages/events in print and JSON.
-2. Declare direct `/notes` unsupported in print/JSON and route deterministic headless use to `pi-notes` CLI or agent tools.
-
-The second option is narrower and consistent with having a dedicated CLI, but an explicit rejection still needs an observable channel; simply documenting silence is inadequate. The first may require using Pi message APIs captured from the extension factory and careful checks so command output is not duplicated in TUI/RPC or injected into later model context unexpectedly. Current Pi API behavior should be prototyped before committing to this design.
+The confirmed decision rule is to prefer direct extension commands that emit mode-safe observable results in print and JSON, provided a Pi API prototype proves this can avoid duplicated TUI/RPC output and model-context pollution. If that boundary cannot be made safe, direct `/notes` must emit an observable unsupported result and route deterministic headless use to `pi-notes` CLI or agent tools. Silent success is not acceptable in either outcome.
 
 RPC should remain fully functional through the extension UI protocol. Mode tests should cover help/list/show, unknown command, missing note, destructive block, and interactive confirmation paths where supported.
 
@@ -182,14 +186,14 @@ Tests should avoid preserving obsolete behavior merely because it is current. Th
 
 The extension hardcodes `.pi`, contrary to Pi's rebranding/config-directory guidance. Extension execution can use exported `CONFIG_DIR_NAME`, but the standalone CLI does not inherently know which host distribution invoked it.
 
-Potential contract:
+Confirmed contract:
 
 - Extension adapter injects the host `CONFIG_DIR_NAME` into `NotesStorage` for project and global paths.
-- Standalone `pi-notes` CLI defaults to `.pi` for backward compatibility and may accept an explicit config-dir option/environment value if rebranded CLI support is required.
+- Standalone `pi-notes` CLI defaults to `.pi` for backward compatibility and may accept a narrowly validated explicit config-dir override that avoids ambiguous data migration.
 - Storage accepts a validated config directory name/path segment rather than embedding `.pi`.
 - Public docs distinguish normal Pi defaults from configurable/rebranded host paths.
 
-The global location needs the same decision as project storage; supporting only project rebranding would be internally inconsistent.
+The global location follows the same decision as project storage; supporting only project rebranding would be internally inconsistent.
 
 ### 9. Extension documentation: state guarantees precisely
 
@@ -208,7 +212,7 @@ Security language must distinguish lexical normalization, canonical containment,
 
 ### 10. Release: make publication intentional and reproducible
 
-The workflow trigger and guide currently disagree. The documented model (`release.published` plus optional `workflow_dispatch`) is safer and more intentional than publishing every push to a release branch, so it is the recommended baseline.
+The workflow trigger and guide currently disagree. The confirmed model is `release.published` plus protected `workflow_dispatch`, replacing publication on pushes to a release branch. The workflow must verify release tag and package version agreement and use a protected GitHub environment when repository settings support it.
 
 Release hardening should consider:
 
@@ -265,4 +269,4 @@ No implementation plan, specs, tickets, or code changes are included at this sta
 
 ## Human review gate
 
-Material choices remain around filesystem symlink policy, agent overwrite behavior, headless command output, config-directory behavior for the standalone CLI, truncation artifact retention, and publication triggers. Recommended defaults are recorded in `open-questions.md`; planning should wait for human confirmation.
+All material brainstorm questions have confirmed answers and `open-questions.md` is clear. The task remains in the lifecycle's `blocked` Q&A state so the human can select the next `/tasks` action; it is ready for implementation planning.
