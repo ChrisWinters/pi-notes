@@ -5,9 +5,10 @@ Review date: 2026-08-10
 
 ## Summary
 
-- Result: no-gaps
-- Gap count: 0
-- Recommended next step: complete the verified task
+Result: no-gaps
+Gap count: 0
+No gaps found.
+Recommended next step: none
 
 ## Review Scope
 
