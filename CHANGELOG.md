@@ -4,22 +4,33 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## [1.1.0] - 2026-08-09
+
 ### Added
-- Symlink, wrong-type, containment, cancellation, shared-queue, headless-mode, release, and package regression coverage
-- Recoverable owner-only temporary artifacts for complete truncated tool output with scheduled 24-hour and startup stale cleanup
+- Recoverable owner-only temporary artifacts for complete truncated tool output, with live 24-hour deletion and startup stale cleanup
 - Explicit typed command outcomes independent of UI notification severity
+- Regression coverage for storage boundaries, cancellation, shared Pi queue integration, headless modes, package contents, and release workflows
+- Root `AGENTS.md` operating guidance and local Fallow analysis configuration for repository maintenance
 
 ### Changed
-- Extension storage now honors Pi's configured directory name; standalone CLI retains `.pi` compatibility
+- Extension storage now honors Pi's configured directory name; the standalone CLI retains `.pi` compatibility
 - Extension mutations coordinate through Pi's file mutation queue; CLI/internal mutations remain process-local
 - Agent move/rename tools no longer expose overwrite and return exact human-confirmed command handoffs on conflicts
 - Print/JSON direct commands now emit an observable unsupported CLI handoff instead of silent success
 - Pi coding-agent and TypeBox imports are host-provided peers with repository-tested development versions
+- Development tooling was updated to TypeScript 6, ESLint 10, Vitest 4, Node 26 type definitions, and Pi coding-agent 0.84
 - CI now uses `npm ci`; publishing now requires a published release or protected-main manual tag route with tag/version verification
+
+### Fixed
+- CLI failures and cancellations now return nonzero status, while agent tool domain failures surface as tool errors
+- Complete tool results, including recovery notices, stay within Pi's 2,000-line and 50KB limits
+- Default-scope mutations acquire all candidate note identities before winner selection, preventing queued scope changes from escaping coordination
+- Move and rename share atomic destination-write behavior across overwrite and non-overwrite paths
 
 ### Security
 - All note operations reject relevant symlinked config/storage components and entries and require canonical containment and regular path types
-- Tool cancellation is checked before queued mutation starts, preventing deferred writes after abort
+- Recursive uninstall rejects internal or broken symlink entries before removing a notes directory
+- Cancellation is checked before and after queue waits and between scan phases, preventing deferred writes after abort
 
 ## [1.0.0] - 2026-05-24
 
