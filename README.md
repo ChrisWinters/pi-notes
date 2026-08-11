@@ -121,6 +121,18 @@ Parser semantics:
 
 Interactive TUI and RPC `/notes` commands use Pi notifications/dialogs. Direct `/notes` in print or JSON mode is intentionally unsupported and emits an observable stderr error with the equivalent `pi-notes ...` CLI handoff; use the CLI for reliable headless output and exit status.
 
+## Local validation
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+npm run test:coverage
+npm run build
+```
+
+Measured coverage is written to ignored `coverage/coverage-final.json` for local Fallow analysis.
+
 ## Docs
 
 - Documentation index: `docs/README.md`

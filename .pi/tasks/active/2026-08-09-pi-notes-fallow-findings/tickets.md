@@ -103,7 +103,7 @@ npm pack --dry-run --json --ignore-scripts
 
 Target tests first. Refactor CLI flag consumption or command-context construction only when the measured post-test report still exceeds configured CRAP thresholds and the change simplifies source without changing public behavior.
 
-## [ ] tkt-004 — Reconcile Fallow and final project evidence
+## [x] tkt-004 — Reconcile Fallow and final project evidence
 
 ### Dependencies
 
