@@ -65,7 +65,7 @@ npx fallow dupes --trace dup:d01b53c0 --format json --quiet 2>/dev/null || true
 
 Any change to destructive ordering, queue windows, open flags, file mode, conflict text, or source-after-success behavior blocks completion until focused evidence proves equivalence.
 
-## [ ] tkt-003 — Add measured coverage and resolve complexity gaps
+## [x] tkt-003 — Add measured coverage and resolve complexity gaps
 
 ### Dependencies
 

@@ -76,6 +76,19 @@ afterEach(async () => {
 });
 
 describe("handleNotesCommand", () => {
+  it("propagates unexpected handler errors", async () => {
+    const cwd = await createTempCwd();
+    const ctx = createContext(cwd, true, true);
+    const unexpected = new Error("unexpected notification failure");
+    ctx.ui.notify.mockImplementation(() => {
+      throw unexpected;
+    });
+
+    await expect(
+      handleNotesCommand("show missing", ctx as unknown as ExtensionCommandContext)
+    ).rejects.toBe(unexpected);
+  });
+
   it("creates and shows a note", async () => {
     const cwd = await createTempCwd();
     const ctx = createContext(cwd, true, true);

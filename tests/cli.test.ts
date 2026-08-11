@@ -95,6 +95,27 @@ describe("pi-notes CLI", () => {
     expect(result.stdout).toContain("Usage:");
   });
 
+  it.each([
+    ["empty argv", []],
+    ["help command", ["help"]],
+    ["commands alias", ["commands"]]
+  ])("shows usage for %s", async (_label, argv) => {
+    const cwd = await createTempWorkspace();
+    const result = await runCaptured(argv, cwd);
+
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toContain("Usage:");
+  });
+
+  it("reports an unknown command through the CLI failure path", async () => {
+    const cwd = await createTempWorkspace();
+    const result = await runCaptured(["unknown-command"], cwd);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("Unknown /notes subcommand: unknown-command");
+  });
+
   it("supports deterministic show flow", async () => {
     const cwd = await createTempWorkspace();
     const stdout: string[] = [];
