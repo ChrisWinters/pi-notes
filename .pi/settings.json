@@ -1,5 +1,8 @@
 {
   "autoLoadSkills": [
     "fallow"
+  ],
+  "packages": [
+    "npm:pi-cbm"
   ]
 }
